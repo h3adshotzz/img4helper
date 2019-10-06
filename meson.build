@@ -13,6 +13,7 @@ add_project_arguments('-Wno-error=unused-variable', language : 'c')
 add_project_arguments('-Wno-error=unused-function', language : 'c')
 add_project_arguments('-Wunused-parameter', language : 'c')
 add_project_arguments('-Wno-error=int-conversion', language : 'c')
+add_project_arguments('-Wmissing-field-initializers', language : 'c')
 
 
 #

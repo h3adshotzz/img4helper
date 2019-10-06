@@ -2,7 +2,7 @@
 #
 #	Sources
 #
-sources = ['main.c']
+sources = ['main.c', 'img4.c', 'asn1.c']
 
 
 #
