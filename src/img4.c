@@ -89,6 +89,11 @@ char* read_from_file (const char *path)
  */
 void print_img4 (Img4PrintType type, char* filename)
 {
+	// TODO: Move specific image handling code into seperate functions
+	// TODO: Add parsing for IM4M
+	// TODO: Idk, think of something else to add.
+
+
 	// Check the filename given is not NULL
 	if (!filename) {
 		g_print("[Error] No filename given.\n");
