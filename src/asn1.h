@@ -32,6 +32,8 @@
 #include <stdio.h>
 //#include <plist/plist.h>
 
+#define putStr(s,l) printf("%.*s",(int)l,s)
+
 typedef unsigned char byte;
 
 // Tag Class
@@ -104,15 +106,21 @@ asn1ElemLen_t asn1Len (const char buf[4]);
 char *asn1GetString (char *buf, char **outstring, size_t *strlen);
 int asn1ElementsInObject (const char *buf);
 char *asn1ElementAtIndex (const char *buf, int index);
-
+size_t asn1GetPrivateTagnum (asn1Tag_t *tag, size_t *sizebytes);
+void asn1PrintRecKeyVal (char *buf);
+void asn1PrintValue (asn1Tag_t *tag);
 
 ////////////
 
 int getSequenceName (const char *buf, char **name, size_t *namelen);
 
+void printI5AString (asn1Tag_t *str);
 void printHex (asn1Tag_t *str);
+void printNumber (asn1Tag_t *str);
+void printPrivtag (size_t privTag);
 
 void printStringWithKey (char* key, asn1Tag_t *string);
 void printKBAG (char *octet);
+void printMANB (char *buf);
 
 #endif

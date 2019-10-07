@@ -62,13 +62,16 @@ int main (int argc, char* argv[])
 	for (int i = 0; i < argc; i++) {
 		g_print("[%d]: %s\n", i, argv[i]);
 	}
-	g_print ("=========================== \n\n");
+	g_print ("=========================== \n");
 
 	// Parse any args passed
 	if (!g_option_context_parse (context, &argc, &argv, &error)) {
 		g_critical ("Failed: %s\n", error->message);
 		exit(1);
 	}
+
+	// Print version info
+	g_print ("img4helper %s - Written by @h3adsh0tzz\n\n", VERSION_STRING);
 
 	// Check for print args
 	if (print_all) {

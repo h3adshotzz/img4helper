@@ -128,6 +128,101 @@ char* asn1ElementAtIndex (const char *buf, int index)
 	return (char*) ret;
 }
 
+size_t asn1GetPrivateTagnum (asn1Tag_t *tag, size_t *sizebytes)
+{
+	if (*(unsigned char *) tag != 0xff) {
+		g_print ("[Error] Not a private TAG 0x%02x\n", *(unsigned int *) tag);
+		exit(1);
+	}
+
+	size_t sb = 1;
+	asn1ElemLen_t taglen = asn1Len((char *)++tag);
+	taglen.sizeBytes -= 1;
+
+	if (taglen.sizeBytes != 4) {
+		taglen.sizeBytes = 4;
+	}
+
+	size_t tagname = 0;
+	do {
+		tagname *= 0x100;
+		tagname >>= 1;
+		tagname += ((asn1PrivateTag_t *)tag)->num;
+		sb++;
+	} while (((asn1PrivateTag_t *) tag++)->more);
+
+	if (sizebytes) *sizebytes = sb;
+	return tagname;
+}
+
+void asn1PrintRecKeyVal (char *buf)
+{
+	if (((asn1Tag_t *) buf)->tagNumber == kASN1TagSEQUENCE) {
+		int i;
+		if ((i = asn1ElementsInObject(buf)) != 2) {
+			g_print ("[Error] Expecting 2 elements, found %d\n", i);
+			exit(1);
+		}
+
+		printI5AString((asn1Tag_t *) asn1ElementAtIndex(buf, 0));
+		g_print(": ");
+
+		asn1PrintRecKeyVal (asn1ElementAtIndex(buf, 1));
+		g_print("\n");
+
+		return;
+	} else if (((asn1Tag_t *)buf)->tagNumber != kASN1TagSET) {
+		asn1PrintValue ((asn1Tag_t *)buf);
+		return;
+	}
+
+	// Must be a kASN1TagSET
+	g_print("------------------------------\n");
+	for (int i = 0; i < asn1ElementsInObject(buf); i++) {
+
+		char *elem = (char*)asn1ElementAtIndex(buf, i);
+		size_t sb;
+
+		printPrivtag(asn1GetPrivateTagnum((asn1Tag_t *) elem, &sb));
+		g_print (": ");
+
+		elem += sb;
+		elem += asn1Len(elem + 1).sizeBytes;
+		asn1PrintRecKeyVal (elem);
+
+	}
+}
+
+void asn1PrintValue (asn1Tag_t *tag)
+{
+	if (tag->tagNumber == kASN1TagIA5String) {
+		printI5AString (tag);
+	} else if (tag->tagNumber == kASN1TagOCTET) {
+		printHex (tag);
+	} else if (tag->tagNumber == kASN1TagINTEGER) {
+		asn1ElemLen_t len = asn1Len ((char *) tag + 1);
+
+		unsigned char *num = (unsigned char *) tag + 1 + len.sizeBytes;
+		uint64_t pnum = 0;
+
+		while (len.dataLen--) {
+			pnum *= 0x100;
+			pnum += *num++;
+		}
+
+		if (sizeof(uint64_t) == 8) {
+			g_print("%llu", pnum);
+		} else {
+			g_print(" (hex)");
+		}
+
+	} else if (tag->tagNumber == kASN1TagBOOLEAN) {
+		g_print ("%s", (*(char *) tag + 2 == 0) ? "false" : "true");
+	} else {
+		g_print ("[Error] Can't print unknown tag %02x\n", *(unsigned char *)tag);
+	}
+}
+
 
 
 ////////////////////
@@ -169,6 +264,94 @@ void printHex (asn1Tag_t *str)
 	asn1ElemLen_t len = asn1Len((char *) str + 1);
 	unsigned char *string = (unsigned char *) str + len.sizeBytes + 1;
 	while (len.dataLen--) g_print ("%02x", *string++);
+}
+
+void printNumber (asn1Tag_t *tag)
+{
+	if (tag->tagNumber != kASN1TagINTEGER) {
+		g_print("[Error] Tag not an Integer\n");
+		return;
+	}
+
+	asn1ElemLen_t len = asn1Len((char *) ++tag);
+	uint32_t num = 0;
+	while (len.sizeBytes--) {
+		num *= 0x100;
+		num += *(unsigned char*) ++tag;
+	}
+	printf("%u", num);
+}
+
+void printI5AString (asn1Tag_t *str)
+{
+	if (str->tagNumber != kASN1TagIA5String) {
+		g_print ("[Error] Not an IA5String\n");
+		exit(1);
+	}
+
+	asn1ElemLen_t len = asn1Len((char *) ++str);
+	putStr(((char*)str)+len.sizeBytes, len.dataLen);
+}
+
+void printPrivtag (size_t privTag)
+{
+	char *ptag = (char *) &privTag;
+	int len = 0;
+	while (*ptag) {
+		ptag++;
+		len++;
+	}
+	while (len--) {
+		putchar(*--ptag);
+	}
+}
+
+void printMANB (char *buf)
+{
+	// Get the buf magic
+	char *magic;
+	size_t l;
+	getSequenceName(buf, &magic, &l);
+
+	// Check that the magic contains MANB
+	if (strncmp("MANB", magic, l)) {
+		g_print ("[Error] Expected \"MANB\", got \"%s\"\n", magic);
+	}
+
+	// Count the number of elements and make sure it is at least 2
+	int manbElmCount = asn1ElementsInObject(buf);
+	if (manbElmCount < 2) {
+		g_print ("[Error] Not enough elements in MANB\n");
+		exit(1);
+	}
+
+	// Fetch all the elements from the manifest body
+	char *manbSeq = (char *)asn1ElementAtIndex(buf, 1);
+	for (int i = 0; i < asn1ElementsInObject(manbSeq); i++) {
+
+		// Cycle through each, parsing it and printing.
+		asn1Tag_t *manbElm = (asn1Tag_t *)asn1ElementAtIndex(manbSeq, i);
+
+		size_t privTag = 0;
+		if (*(char *) manbElm == kASN1TagPrivate) {
+
+			size_t sb;
+			printPrivtag(privTag = asn1GetPrivateTagnum(manbElm, &sb));
+			g_print(": ");
+			manbElm += sb;
+
+		} else {
+			manbElm++;
+		}
+
+		manbElm += asn1Len ((char *)manbElm).sizeBytes;
+
+		asn1PrintRecKeyVal ((char *)manbElm);
+		if (strncmp((char *)&privTag, "PNAM", 4) == 0) {
+			break;
+		}
+	}
+
 }
 
 void printStringWithKey (char* key, asn1Tag_t *string)

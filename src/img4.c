@@ -22,6 +22,7 @@
 #include <stdio.h>
 
 
+
 //////////////////////////////////////////////////////////////////
 /*				   IM4P/IM4M Specific Funs						*/
 //////////////////////////////////////////////////////////////////
@@ -34,8 +35,47 @@
  *  within the IM4P header.
  *
  */
-void handle_im4p ()
+void handle_im4p (char *buf)
 {
+
+	// Print IM4P
+	g_print ("IM4P: ------\n");
+
+	// Get buf magic
+	char *magic;
+	size_t l;
+	getSequenceName(buf, &magic, &l);
+
+	// Check if the magic matches IM4P
+	if (strncmp("IM4P", magic, l)) {
+		g_print ("[Error] Expected \"IM4P\", got \"%s\"\n", magic);
+	}
+
+	// Grab all the elements in the file magic.
+	int elems = asn1ElementsInObject(buf);
+
+	// Print the Image type, desc and size
+	if (--elems > 0) printStringWithKey("Type", (asn1Tag_t *) asn1ElementAtIndex(buf, 1));
+	if (--elems > 0) printStringWithKey("Desc", (asn1Tag_t *) asn1ElementAtIndex(buf, 2));
+	if (--elems > 0) {
+
+		// Check the data size and print it.
+		asn1Tag_t *data = (asn1Tag_t *) asn1ElementAtIndex(buf, 3);
+		if (data->tagNumber != kASN1TagOCTET) {
+			g_print ("[Warning] Skipped an unexpected tag where an OCTETSTRING was expected\n");
+		} else {
+			g_print ("Size: 0x%08zx\n\n", asn1Len((char *) data + 1).dataLen);
+		}
+	}
+
+	// Check for KBAG values. There should be two on encrypted images, with the first being PRODUCT
+	//      and the seccond being DEVELOPMENT.
+	if (--elems > 0) {
+		g_print ("KBAG:\n");
+		printKBAG ((char *) asn1ElementAtIndex(buf, 4));
+	} else {
+		g_print ("This IM4P does not contain any KBAG values\n");
+	}
 
 }
 
@@ -48,8 +88,56 @@ void handle_im4p ()
  *	within the IM4M.
  *
  */
-void handle_im4m()
+void handle_im4m(char *buf)
 {
+
+	// Print IM4M
+	g_print("IM4M: ------\n");
+
+	// Get buf magic
+	char *magic;
+	size_t l;
+	getSequenceName(buf, &magic, &l);
+
+	// Check the magic matches IM4M
+	if (strncmp("IM4M", magic, l)) {
+		g_print ("[Error] Expected \"IM4M\", got \"%s\"\n", magic);
+	}
+
+	// Check the IM4M has at least two elems
+	int elems = asn1ElementsInObject (buf);
+	if (elems < 2) {
+		g_print ("[Error] Expecting at least 2 elements\n");
+		exit(1);
+	}
+
+	// Print the IM4M Version
+	if (--elems > 0) {
+		g_print("Version: ");
+		printNumber((asn1Tag_t *) asn1ElementAtIndex(buf, 1));
+		putchar('\n');
+	}
+
+	// Go through each IM4M element and print it
+	if (--elems > 0) {
+
+		// Manifest Body parse
+		asn1Tag_t *manbset = (asn1Tag_t *) asn1ElementAtIndex(buf, 2);
+		if (manbset->tagNumber != kASN1TagSET) {
+			g_print ("[Error] Expecting SET\n");
+			exit(1);
+		}
+
+		asn1Tag_t *privtag = manbset + asn1Len((char *) manbset + 1).sizeBytes + 1;
+
+		size_t sb;
+		printPrivtag(asn1GetPrivateTagnum(privtag++, &sb));
+		g_print("\n");
+
+		char *manbseq = (char *)privtag + sb;
+		manbseq += asn1Len(manbseq).sizeBytes + 1;
+		printMANB(manbseq);
+	}
 
 }
 
@@ -112,53 +200,28 @@ void print_img4 (Img4PrintType type, char* filename)
 	// Switch through the possible PRINT operations
 	switch (type) {
 		case IMG4_PRINT_ALL:
-			// This means we are printing both the IM4P and the IM4M.
-			char *magic;
-			size_t l;
-			getSequenceName(buf, &magic, &l);
 
-			// Check if the magic matches IM4P
-			if (strncmp("IM4P", magic, l)) {
-				g_print ("[Error] Expected \"IM4P\", got \"%s\"\n", magic);
-			}
+			// Handle the IM4P first
+			handle_im4p(buf);
 
-			// Grab all the elements in the file magic.
-			int elems = asn1ElementsInObject(buf);
-#ifdef DEBUG
-			g_print("Elements in buffer: %d\n", elems);
-#endif
+			// Print a few line breaks inbetween
+			g_print ("\n\n");
 
-			// Print Image type, description and size
-			if (--elems > 0) printStringWithKey("Type", (asn1Tag_t *) asn1ElementAtIndex(buf, 1));
-			if (--elems > 0) printStringWithKey("Desc", (asn1Tag_t *) asn1ElementAtIndex(buf, 2));
-			if (--elems > 0) {
-
-				// Check the data size and print it.
-				asn1Tag_t *data = (asn1Tag_t *) asn1ElementAtIndex(buf, 3);
-				if (data->tagNumber != kASN1TagOCTET) {
-					g_print ("[Warning] Skipped an unexpected tag where an OCTETSTRING was expected\n");
-				} else {
-					g_print ("Size: 0x%08zx\n\n\n", asn1Len((char *) data + 1).dataLen);
-				}
-
-			}
-
-			// Check for KBAG values. There should be two on encrypted images, with the first being PRODUCTION
-			// 		and the seccond being DEVELOPMENT.
-			if (--elems > 0) {
-				g_print ("KBAG:\n");
-				printKBAG ((char *) asn1ElementAtIndex(buf, 4));
-			} else {
-				g_print ("This IM4P does not contain any KBAG values\n");
-			}
+			// Then handle the IM4M
+			handle_im4m(buf);
 
 			break;
 		case IMG4_PRINT_IM4P:
-			g_print("Print IM4P\n");
-			//print_im4p (
+
+			// Handle the IM4P
+			handle_im4p(buf);
+
 			break;
 		case IMG4_PRINT_IM4M:
-			g_print("Print IM4M\n");
+
+			// Handle the IM4M
+			handle_im4m(buf);
+
 			break;
 		default:
 			exit(1);
