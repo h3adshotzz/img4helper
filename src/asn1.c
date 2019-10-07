@@ -71,54 +71,48 @@ char *asn1GetString (char *buf, char **outstring, size_t *strlen)
 }
 
 
-int asn1ElementAtIndexWithCounter (const char *buf, int index, asn1Tag_t **tag)
-{
-	int ret = 0;
-	asn1ElemLen_t buflen = asn1Len(++buf);
+int asn1ElementAtIndexWithCounter(const char *buf, int index, asn1Tag_t **tagret){
+    int ret = 0;
 
-	if (!((asn1Tag_t *)buf)->isConstructed) return 0;
-	asn1ElemLen_t len = buflen;
+    if (!((asn1Tag_t *)buf)->isConstructed) return 0;
+    asn1ElemLen_t len = asn1Len(++buf);
 
-	buf += len.sizeBytes;
+    buf +=len.sizeBytes;
 
-	// TODO: Add length and range checks
-	while (len.dataLen) {
-		if (ret == index && tag) {
-			*tag = (asn1Tag_t *)buf;
-			g_print("Something happened\n");
-			return ret;
+	/* TODO: add length and range checks */
+    while (len.dataLen) {
+        if (ret == index && tagret) {
+            *tagret = (asn1Tag_t *)buf;
+            return ret;
+        }
+
+        if (*buf == kASN1TagPrivate) {
+
+            size_t sb = 0;
+            //asn1GetPrivateTagnum((asn1Tag_t *)buf,&sb);
+            buf += sb;
+            len.dataLen -= sb;
+
+        } else if (*buf == (char)0x9F) {
+
+            //buf is element in set and it's value is encoded in the next byte
+            asn1ElemLen_t l = asn1Len(++buf);
+            if (l.sizeBytes > 1) l.dataLen += 0x80;
+            buf += l.sizeBytes;
+            len.dataLen -= 1 + l.sizeBytes;
+
+        } else {
+            buf++,len.dataLen--;
 		}
 
-		if (*buf == kASN1TagPrivate) {
+        asn1ElemLen_t sublen = asn1Len(buf);
+        size_t toadd = sublen.dataLen + sublen.sizeBytes;
+        len.dataLen -= toadd;
+        buf += toadd;
+        ret ++;
+    }
 
-			g_print ("kASN1TagPrivate\n");
-			size_t sb = 0;
-			//asn1GetPrivateTagnum((asn1Tag_t *)buf, &sb);
-			buf += sb;
-			len.dataLen = sb;
-
-		} else if (*buf == (char)0x9F) {
-
-			g_print ("*buf == (char)0x9F\n");
-			// buf is an element in the set and it's value is encoded in the next byte
-			asn1ElemLen_t l = buflen;
-			if (l.sizeBytes > 1) l.dataLen += 0x80;
-			buf += l.sizeBytes;
-			len.dataLen -= 1 + l.sizeBytes;
-
-		} else {
-			g_print ("else\n");
-			buf++, len.dataLen--;
-		}
-
-		asn1ElemLen_t sublen = buflen;
-		size_t toadd = sublen.dataLen + sublen.sizeBytes;
-		len.dataLen -= toadd;
-		buf += toadd;
-		ret ++;
-	}
-
-	return ret;
+    return ret;
 }
 
 
@@ -126,6 +120,119 @@ int asn1ElementsInObject (const char *buf)
 {
 	return asn1ElementAtIndexWithCounter (buf, -1, NULL);
 }
+
+char* asn1ElementAtIndex (const char *buf, int index)
+{
+	asn1Tag_t *ret;
+	asn1ElementAtIndexWithCounter(buf, index, &ret);
+	return (char*) ret;
+}
+
+
+
+////////////////////
+
+/* These functions are not ASN.1 specific but are most appropriate in asn1.c */
+
+int getSequenceName (const char *buf, char **name, size_t *namelen)
+{
+	int err = 0;
+
+	if (((asn1Tag_t *) buf)->tagNumber != kASN1TagSEQUENCE) {
+		g_print("not a sequence\n");
+		return err;
+	}
+
+	int elems = asn1ElementsInObject(buf);
+	if (!elems) {
+		g_print("no elements in sequence\n");
+		return err;
+	}
+
+	size_t len;
+	asn1GetString(asn1ElementAtIndex(buf, 0), name, &len);
+	if (namelen) *namelen = len;
+
+	return err;
+}
+
+
+// Printing functions
+
+void printHex (asn1Tag_t *str)
+{
+	if (str->tagNumber != kASN1TagOCTET) {
+		g_print ("[Error] not an OCTET string\n");
+		exit(1);
+	}
+
+	asn1ElemLen_t len = asn1Len((char *) str + 1);
+	unsigned char *string = (unsigned char *) str + len.sizeBytes + 1;
+	while (len.dataLen--) g_print ("%02x", *string++);
+}
+
+void printStringWithKey (char* key, asn1Tag_t *string)
+{
+	char *str = 0;
+	size_t len;
+
+	asn1GetString((char *)string, &str, &len);
+
+	printf("%s: ", key);
+	printf("%.*s", (int)len, str);
+	printf("\n");
+}
+
+void printKBAG (char* octet)
+{
+
+	// Check if the given octet is in fact a kASN1TagOCTET
+	if (((asn1Tag_t *) octet)->tagNumber != kASN1TagOCTET) {
+		g_print ("[Error] not an OCTET\n");
+		return;
+	}
+
+	// Get the Octet length
+	asn1ElemLen_t octetlen = asn1Len(++octet);
+	octet += octetlen.sizeBytes;
+
+	// Parse the KBAG value(s)
+	int subseqs = asn1ElementsInObject(octet);
+	for (int i = 0; i < subseqs; i++) {
+
+		// Pick the first/next KBAG value
+		char *s = (char *)asn1ElementAtIndex(octet, i);
+		int elems = asn1ElementsInObject(s);
+
+		// Try to parse it
+		if (elems--) {
+			asn1Tag_t *num = (asn1Tag_t *) asn1ElementAtIndex(s, 0);
+			if (num->tagNumber != kASN1TagINTEGER) {
+				g_print ("[Warning] Skipping unexpected tag\n");
+			} else {
+				char n = *(char *)(num + 2);
+				g_print ("num: %d\n", n);
+			}
+		}
+
+		// Print the hex strings
+		if (elems--) {
+			printHex((asn1Tag_t *) asn1ElementAtIndex(s, 1));
+			printHex((asn1Tag_t *) asn1ElementAtIndex(s, 2));
+			putchar('\n');
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
 
 
 

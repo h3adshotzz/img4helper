@@ -62,6 +62,7 @@ int main (int argc, char* argv[])
 	for (int i = 0; i < argc; i++) {
 		g_print("[%d]: %s\n", i, argv[i]);
 	}
+	g_print ("=========================== \n\n");
 
 	// Parse any args passed
 	if (!g_option_context_parse (context, &argc, &argv, &error)) {

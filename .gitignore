@@ -35,6 +35,7 @@
 *.i*86
 *.x86_64
 *.hex
+img4toolv2
 
 # Debug files
 *.dSYM/
@@ -53,3 +54,6 @@ dkms.conf
 
 # Meson build directory
 build/
+
+# Fuck off DS Store
+.DS_Store

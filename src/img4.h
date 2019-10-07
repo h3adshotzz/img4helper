@@ -22,6 +22,7 @@
 
 #include <glib.h>
 #include "asn1.h"
+#include "config.h"
 
 typedef enum {
 	IMG4_PRINT_ALL,

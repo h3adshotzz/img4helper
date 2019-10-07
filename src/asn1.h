@@ -103,9 +103,16 @@ typedef struct {
 asn1ElemLen_t asn1Len (const char buf[4]);
 char *asn1GetString (char *buf, char **outstring, size_t *strlen);
 int asn1ElementsInObject (const char *buf);
-char *asn1ElementsAtIndex (const char *buf, int index);
+char *asn1ElementAtIndex (const char *buf, int index);
 
 
+////////////
 
+int getSequenceName (const char *buf, char **name, size_t *namelen);
+
+void printHex (asn1Tag_t *str);
+
+void printStringWithKey (char* key, asn1Tag_t *string);
+void printKBAG (char *octet);
 
 #endif
