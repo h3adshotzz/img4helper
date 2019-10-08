@@ -251,6 +251,82 @@ int getSequenceName (const char *buf, char **name, size_t *namelen)
 	return err;
 }
 
+char *getIM4PFromIMG4 (char *buf)
+{
+	char *magic;
+	size_t l;
+
+	getSequenceName (buf, &magic, &l);
+
+	if (strncmp("IMG4", magic, l)) {
+		g_print ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
+		exit(1);
+	}
+
+	if (asn1ElementsInObject (buf) < 2) {
+		g_print ("[Error] Not enough elements in SEQUENCE\n");
+		exit(1);
+	}
+
+	char *ret = (char *) asn1ElementAtIndex(buf, 1);
+	getSequenceName (ret, &magic, &l);
+
+	//return (strncmp("IM4P", magic, 4) == 0) ? ret : g_print ("[Error] Expected IM4P, got \"%s\"\n", magic);
+
+	if (strncmp("IM4P", magic, 4) == 0) {
+		return ret;
+	} else {
+		g_print ("[Error] Expected \"IM4M\", got \"%s\"\n", magic);
+		exit(1);
+	}
+
+}
+
+void getElementsFromIMG4 (char *buf)
+{
+	char *magic;
+	size_t l;
+
+	//
+	getSequenceName(buf, &magic, &l);
+	if (strncmp("IMG4", magic, l)) {
+		g_print ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
+		return;
+	}
+
+	//
+	int elemCnt = asn1ElementsInObject (buf);
+	for (int i = 0; i < elemCnt; i++) {
+		char *ret = (char *)asn1ElementAtIndex(buf, i);
+		ret += asn1Len(ret + 1).sizeBytes + 1;
+		char *tmp;
+		getSequenceName (ret, &tmp, &l);
+		g_print ("[%d]: %s\n", i, tmp);
+	}
+}
+
+char* getImageFileType (char *buf)
+{
+	char *magic;
+	size_t l;
+
+	//
+	getSequenceName(buf, &magic, &l);
+	g_print ("magic: %s\n", magic);
+	if (!strncmp("IMG4", magic, l)) {
+		return "IMG4";
+	} else if (!strncmp("IM4M", magic, l)) {
+		return "IM4M";
+	} else if (!strncmp("IM4P", magic, l)) {
+		return "IM4P";
+	} else if (!strncmp("IM4R", magic, l)) {
+		return "IM4R";
+	} else {
+		g_print ("[Error] Unexpected tag, got \"%s\"\n", magic);
+		exit(1);
+	}
+}
+
 
 // Printing functions
 

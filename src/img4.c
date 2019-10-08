@@ -101,7 +101,9 @@ void handle_im4m(char *buf)
 
 	// Check the magic matches IM4M
 	if (strncmp("IM4M", magic, l)) {
-		g_print ("[Error] Expected \"IM4M\", got \"%s\"\n", magic);
+		//g_print ("[Error] Expected \"IM4M\", got \"%s\"\n", magic);
+		g_print ("File does not contain an IM4M\n");
+		return;
 	}
 
 	// Check the IM4M has at least two elems
@@ -139,6 +141,25 @@ void handle_im4m(char *buf)
 		printMANB(manbseq);
 	}
 
+}
+
+
+/**
+ *
+ *
+ *
+ *
+ */
+void handle_img4 (char *buf)
+{
+        // Handle the IM4P first
+        handle_im4p(getIM4PFromIMG4 (buf));
+
+        // Print a few line breaks inbetween
+        g_print ("\n\n");
+
+        // Then handle the IM4M
+        handle_im4m(buf);
 }
 
 
@@ -201,14 +222,23 @@ void print_img4 (Img4PrintType type, char* filename)
 	switch (type) {
 		case IMG4_PRINT_ALL:
 
-			// Handle the IM4P first
-			handle_im4p(buf);
+			g_print ("All elements\n");
+			//getElementsFromIMG4 (buf);
 
-			// Print a few line breaks inbetween
-			g_print ("\n\n");
+			char *imtype = getImageFileType (buf);
+			g_print ("Got type: %s\n", imtype);
 
-			// Then handle the IM4M
-			handle_im4m(buf);
+			if (!strcmp(imtype, "IM4M")) {
+				handle_im4m (buf);
+			} else if (!strcmp(imtype, "IM4P")) {
+				handle_im4p (buf);
+			} else if (!strcmp(imtype, "IM4R")) {
+				// does not do anything yet
+			} else if (!strcmp(imtype, "IMG4")) {
+				handle_img4 (buf);
+			} else {
+				g_print ("not sure\n");
+			}
 
 			break;
 		case IMG4_PRINT_IM4P:

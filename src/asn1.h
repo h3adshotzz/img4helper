@@ -32,6 +32,8 @@
 #include <stdio.h>
 //#include <plist/plist.h>
 
+#include "img4.h"
+
 #define putStr(s,l) printf("%.*s",(int)l,s)
 
 typedef unsigned char byte;
@@ -113,6 +115,9 @@ void asn1PrintValue (asn1Tag_t *tag);
 ////////////
 
 int getSequenceName (const char *buf, char **name, size_t *namelen);
+char *getIM4PFromIMG4 (char *buf);
+void getElementsFromIMG4 (char *buf);
+char *getImageFileType (char *buf);
 
 void printI5AString (asn1Tag_t *str);
 void printHex (asn1Tag_t *str);

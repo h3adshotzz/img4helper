@@ -30,6 +30,14 @@ typedef enum {
 	IMG4_PRINT_IM4M
 } Img4PrintType;
 
+
+typedef enum {
+	IMG4_TYPE_IMG4,
+	IMG4_TYPE_IM4M,
+	IMG4_TYPE_IM4P,
+	IMG4_TYPE_IM4R
+} Img4Type;
+
 // Img4 printing
 void print_img4(Img4PrintType type, char* filename);
 
