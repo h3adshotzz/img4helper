@@ -73,45 +73,47 @@ char *asn1GetString (char *buf, char **outstring, size_t *strlen)
 
 int asn1ElementAtIndexWithCounter(const char *buf, int index, asn1Tag_t **tagret){
     int ret = 0;
-
-    if (!((asn1Tag_t *)buf)->isConstructed) return 0;
+    
+    if (!((asn1Tag_t *)buf)->isConstructed) {
+		return 0;
+	}
     asn1ElemLen_t len = asn1Len(++buf);
-
-    buf +=len.sizeBytes;
-
-	/* TODO: add length and range checks */
+    
+    buf += len.sizeBytes;
+    
+	/* TODO: add lenght and range checks */
     while (len.dataLen) {
-        if (ret == index && tagret) {
-            *tagret = (asn1Tag_t *)buf;
+        if (ret == index && tagret){
+            *tagret = (asn1Tag_t *) buf;
             return ret;
         }
-
+        
         if (*buf == kASN1TagPrivate) {
-
-            size_t sb = 0;
-            //asn1GetPrivateTagnum((asn1Tag_t *)buf,&sb);
-            buf += sb;
+            
+			size_t sb;
+            asn1GetPrivateTagnum((asn1Tag_t *) buf, &sb);
+            
+			buf += sb;
             len.dataLen -= sb;
 
-        } else if (*buf == (char)0x9F) {
-
-            //buf is element in set and it's value is encoded in the next byte
+        } else if (*buf == (char)0x9F){
+            
+			//buf is element in set and it's value is encoded in the next byte
             asn1ElemLen_t l = asn1Len(++buf);
             if (l.sizeBytes > 1) l.dataLen += 0x80;
             buf += l.sizeBytes;
             len.dataLen -= 1 + l.sizeBytes;
-
-        } else {
+        
+		} else
             buf++,len.dataLen--;
-		}
-
+        
         asn1ElemLen_t sublen = asn1Len(buf);
         size_t toadd = sublen.dataLen + sublen.sizeBytes;
         len.dataLen -= toadd;
         buf += toadd;
         ret ++;
     }
-
+    
     return ret;
 }
 
@@ -140,6 +142,12 @@ size_t asn1GetPrivateTagnum (asn1Tag_t *tag, size_t *sizebytes)
 	taglen.sizeBytes -= 1;
 
 	if (taglen.sizeBytes != 4) {
+		/* 
+         WARNING: seems like apple's private tag is always 4 bytes long
+         i first assumed 0x84 can be parsed as long size with 4 bytes, 
+         but 0x86 also seems to be 4 bytes size even if one would assume it means 6 bytes size.
+         This opens the question what the 4 or 6 nibble means.
+        */
 		taglen.sizeBytes = 4;
 	}
 
@@ -268,20 +276,55 @@ char *getIM4PFromIMG4 (char *buf)
 		exit(1);
 	}
 
+	// The IM4P should be first, so get the element at index 1
 	char *ret = (char *) asn1ElementAtIndex(buf, 1);
 	getSequenceName (ret, &magic, &l);
-
-	//return (strncmp("IM4P", magic, 4) == 0) ? ret : g_print ("[Error] Expected IM4P, got \"%s\"\n", magic);
 
 	if (strncmp("IM4P", magic, 4) == 0) {
 		return ret;
 	} else {
-		g_print ("[Error] Expected \"IM4M\", got \"%s\"\n", magic);
+		g_print ("[Error] Expected \"IM4P\", got \"%s\"\n", magic);
 		exit(1);
 	}
 
 }
 
+char *getIM4MFromIMG4 (char *buf)
+{
+	char *magic;
+	size_t l;
+
+	getSequenceName (buf, &magic, &l);
+
+	if (strncmp("IMG4", magic, l)) {
+		g_print ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
+		exit(1);
+	}
+
+	if (asn1ElementsInObject (buf) < 3) {
+		g_print ("[Error] Not enough elements in SEQUENCE\n");
+		exit(1);
+	}
+
+	char *ret = (char*) asn1ElementAtIndex (buf, 2);
+    if (((asn1Tag_t *) ret)->tagClass != kASN1TagClassContextSpecific) {
+		g_print ("[Error] unexpected Tag 0x%02x, expected SET\n", *(unsigned char*) ret);
+		exit(1);
+	}
+
+	ret += asn1Len (ret + 1).sizeBytes +1;
+	getSequenceName (ret, &magic, &l);
+
+	if (strncmp("IM4M", magic, 4) == 0) {
+		return ret;
+	} else {
+		g_print ("[Error] Expected \"IM4P\", got \"%s\"\n", magic);
+		exit(1);
+	}
+}
+
+
+// This should return an array of element types [im4p, im4m, im4r]
 void getElementsFromIMG4 (char *buf)
 {
 	char *magic;
@@ -312,7 +355,6 @@ char* getImageFileType (char *buf)
 
 	//
 	getSequenceName(buf, &magic, &l);
-	g_print ("magic: %s\n", magic);
 	if (!strncmp("IMG4", magic, l)) {
 		return "IMG4";
 	} else if (!strncmp("IM4M", magic, l)) {
@@ -373,16 +415,11 @@ void printPrivtag (size_t privTag)
 {
 	char *ptag = (char *) &privTag;
 	int len = 0;
-	while (*ptag) {
-		ptag++;
-		len++;
-	}
-	while (len--) {
-		putchar(*--ptag);
-	}
+	while (*ptag) ptag++, len++;
+	while (len--) putchar(*--ptag);
 }
 
-void printMANB (char *buf)
+void printFormattedMANB (const char *buf, char *padding)
 {
 	// Get the buf magic
 	char *magic;
@@ -392,10 +429,11 @@ void printMANB (char *buf)
 	// Check that the magic contains MANB
 	if (strncmp("MANB", magic, l)) {
 		g_print ("[Error] Expected \"MANB\", got \"%s\"\n", magic);
+		exit(1);
 	}
 
 	// Count the number of elements and make sure it is at least 2
-	int manbElmCount = asn1ElementsInObject(buf);
+	int manbElmCount = asn1ElementsInObject (buf);
 	if (manbElmCount < 2) {
 		g_print ("[Error] Not enough elements in MANB\n");
 		exit(1);
@@ -407,11 +445,11 @@ void printMANB (char *buf)
 
 		// Cycle through each, parsing it and printing.
 		asn1Tag_t *manbElm = (asn1Tag_t *)asn1ElementAtIndex(manbSeq, i);
-
 		size_t privTag = 0;
 		if (*(char *) manbElm == kASN1TagPrivate) {
 
 			size_t sb;
+			g_print ("%s", padding);
 			printPrivtag(privTag = asn1GetPrivateTagnum(manbElm, &sb));
 			g_print(": ");
 			manbElm += sb;
@@ -422,6 +460,7 @@ void printMANB (char *buf)
 
 		manbElm += asn1Len ((char *)manbElm).sizeBytes;
 
+		g_print ("%s", padding);
 		asn1PrintRecKeyVal ((char *)manbElm);
 		if (strncmp((char *)&privTag, "PNAM", 4) == 0) {
 			break;
@@ -440,6 +479,54 @@ void printStringWithKey (char* key, asn1Tag_t *string)
 	printf("%s: ", key);
 	printf("%.*s", (int)len, str);
 	printf("\n");
+}
+
+void printFormattedKBAG (char *octet, char *padding)
+{
+	// Check if the octet is a kASN1TagOCTET
+	if (((asn1Tag_t *) octet)->tagNumber != kASN1TagOCTET) {
+		g_print ("%s[Error] not an OCTET\n", padding);
+		exit(1);
+	}
+
+	// Get the octet length
+	asn1ElemLen_t octetLen = asn1Len(++octet);
+	octet += octetLen.sizeBytes;
+
+	// Parse the KBAG Values
+	int subseqs = asn1ElementsInObject (octet);
+	for (int i = 0; i < subseqs; i++) {
+
+		// Pick the value
+		char *s = (char *)asn1ElementAtIndex (octet, i);
+		int elems = asn1ElementsInObject(s);
+
+		// Parse it
+		if (elems--) {
+			asn1Tag_t *num = (asn1Tag_t *) asn1ElementAtIndex (s, 0);
+			if (num->tagNumber != kASN1TagINTEGER) {
+				g_print ("%s[Warning] Skipping unexpected tag\n", padding);
+			} else {
+				if (i == 0) {
+					g_print ("%sKBAG Production [1]:\n", padding);
+				} else if (i == 1) {
+					g_print ("%sKBAG Development [2]:\n", padding);
+				} else {
+					char n = *(char *)(num + 2);
+					g_print ("%sKBAG Unknown: [%d]:\n", padding, n);
+				}
+			}
+		}
+
+		// Print the KBAG Hex string
+		if (elems--) {
+			g_print("%s", padding);
+			printHex((asn1Tag_t *) asn1ElementAtIndex(s, 1));
+			printHex((asn1Tag_t *) asn1ElementAtIndex(s, 2));
+			putchar('\n');
+			putchar('\n');
+		}
+	}
 }
 
 void printKBAG (char* octet)
@@ -482,24 +569,3 @@ void printKBAG (char* octet)
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

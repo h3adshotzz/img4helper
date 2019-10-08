@@ -116,6 +116,7 @@ void asn1PrintValue (asn1Tag_t *tag);
 
 int getSequenceName (const char *buf, char **name, size_t *namelen);
 char *getIM4PFromIMG4 (char *buf);
+char *getIM4MFromIMG4 (char *buf);
 void getElementsFromIMG4 (char *buf);
 char *getImageFileType (char *buf);
 
@@ -126,6 +127,8 @@ void printPrivtag (size_t privTag);
 
 void printStringWithKey (char* key, asn1Tag_t *string);
 void printKBAG (char *octet);
-void printMANB (char *buf);
+void printFormattedKBAG (char *octet, char *padding);
+void printMANB (const char *buf);
+void printFormattedMANB (const char *buf, char *padding);
 
 #endif

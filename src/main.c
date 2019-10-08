@@ -71,7 +71,8 @@ int main (int argc, char* argv[])
 	}
 
 	// Print version info
-	g_print ("img4helper %s - Written by @h3adsh0tzz\n\n", VERSION_STRING);
+	g_print ("img4helper %s - Written by @h3adsh0tzz\n", VERSION_STRING);
+	g_print ("----------------------------------------\n\n");
 
 	// Check for print args
 	if (print_all) {

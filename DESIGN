@@ -1,0 +1,61 @@
+
+$ img4helper --print-all iBoot.full.img4
+
+img4helper v1.0 - Written by @h3adsh0tzz
+----------------------------------------
+
+/* This output is printing everything (IM4P, IM4M & IM4R) from an .img4 file */
+
+Image type: IMG4
+
+IMG4: ------
+    IM4P: ------
+        Type: ibot
+        Desc: iBoot-5540.40.50
+        Size: 0x000fbd10
+
+        KBAG Production:
+        2c1004e1b7c60cdac82d586e792b7d68a8ef0926ef907209b286eebe29fb0d348e9dbe8ade831fb097202d003e105edf
+
+        KBAG Development:
+        9e46b3acc3f70935c3bd0613165a22021a78ce1e70a4a9a48bacfadef802c01c4d966e56630837e259c77f28b256d14b
+
+    IM4M: ------
+        Version: 0
+        MANB:
+        MANP: MANP: ------------------------------
+        BNCH: BNCH: b77805911bc6ed4b19046bd880eb0512523a1a4f
+        BORD: BORD: 2
+        CEPO: CEPO: 1
+        CHIP: CHIP: 35168
+        CPRO: CPRO: true
+        CSEC: CSEC: true
+        ECID: ECID: 2622038948933313
+        SDOM: SDOM: 1
+        snon: snon: b1a1456387270c061b62a950526222d62c3c6e31
+        srvn: srvn: 2101bdf48b28ace343936ed6cbaee7609812753e
+
+    IM4R: ------
+        BNCN
+        BNCN: 7d7bdc28e5eca36d
+
+IMG4: --end--
+
+
+$ img4helper --print-im4p iBoot.d22.RELEASE.im4p
+
+img4helper v1.0 - Written by @h3adsh0tzz
+----------------------------------------
+
+Image type: IM4P
+
+IM4P: ------
+    Type: ibot
+    Desc: iBoot-5540.40.50
+    Size: 0x000fbd10
+
+    KBAG Production:
+    2c1004e1b7c60cdac82d586e792b7d68a8ef0926ef907209b286eebe29fb0d348e9dbe8ade831fb097202d003e105edf
+
+    KBAG Development:
+    9e46b3acc3f70935c3bd0613165a22021a78ce1e70a4a9a48bacfadef802c01c4d966e56630837e259c77f28b256d14b
