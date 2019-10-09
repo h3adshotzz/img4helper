@@ -201,6 +201,50 @@ void asn1PrintRecKeyVal (char *buf)
 	}
 }
 
+void asn1PrintIM4MVal (char *buf, char* padding)
+{
+	if (((asn1Tag_t *) buf)->tagNumber == kASN1TagSEQUENCE) {
+		int i;
+		if ((i = asn1ElementsInObject(buf)) != 2) {
+			g_print ("[Error] Expecting 2 elements, found %d\n", i);
+			exit(1);
+		}
+
+		asn1Tag_t *str = (asn1Tag_t *) asn1ElementAtIndex(buf, 0);
+		if (str->tagNumber != kASN1TagIA5String) {
+			g_print ("[Error] Not an IA5String\n");
+			exit(1);
+		}
+
+		asn1ElemLen_t len = asn1Len((char *) ++str);
+		g_print("%s %.*s: ", padding, (int) len.dataLen, ((char *) str) + len.sizeBytes);
+
+		asn1PrintRecKeyVal (asn1ElementAtIndex(buf, 1));
+		g_print("\n");
+
+		return;
+	} else if (((asn1Tag_t *)buf)->tagNumber != kASN1TagSET) {
+		asn1PrintValue ((asn1Tag_t *)buf);
+		return;
+	}
+
+	// Must be a kASN1TagSET
+	g_print("------------------------------\n");
+	for (int i = 0; i < asn1ElementsInObject(buf); i++) {
+
+		char *elem = (char*)asn1ElementAtIndex(buf, i);
+		size_t sb;
+
+		printPrivtag(asn1GetPrivateTagnum((asn1Tag_t *) elem, &sb));
+		g_print (": ");
+
+		elem += sb;
+		elem += asn1Len(elem + 1).sizeBytes;
+		asn1PrintRecKeyVal (elem);
+
+	}
+}
+
 void asn1PrintValue (asn1Tag_t *tag)
 {
 	if (tag->tagNumber == kASN1TagIA5String) {
@@ -445,12 +489,20 @@ void printFormattedMANB (const char *buf, char *padding)
 
 		// Cycle through each, parsing it and printing.
 		asn1Tag_t *manbElm = (asn1Tag_t *)asn1ElementAtIndex(manbSeq, i);
+
+
+		//This prints the property name
 		size_t privTag = 0;
 		if (*(char *) manbElm == kASN1TagPrivate) {
 
 			size_t sb;
 			g_print ("%s", padding);
-			printPrivtag(privTag = asn1GetPrivateTagnum(manbElm, &sb));
+			size_t privTag = asn1GetPrivateTagnum(manbElm, &sb);
+			char *ptag = (char *) &privTag;
+			int len = 0;
+			while (*ptag) ptag++, len++;
+			while (len--) putchar(*--ptag);
+
 			g_print(": ");
 			manbElm += sb;
 
@@ -458,10 +510,9 @@ void printFormattedMANB (const char *buf, char *padding)
 			manbElm++;
 		}
 
+		//This prints the property value.
 		manbElm += asn1Len ((char *)manbElm).sizeBytes;
-
-		g_print ("%s", padding);
-		asn1PrintRecKeyVal ((char *)manbElm);
+		//asn1PrintIM4MVal ((char *)manbElm, padding);
 		if (strncmp((char *)&privTag, "PNAM", 4) == 0) {
 			break;
 		}

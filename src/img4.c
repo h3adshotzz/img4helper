@@ -58,7 +58,6 @@ void handle_im4p (char *buf, int tabs)
 	// Grab all the elements in the file magic.
 	// TODO: counting more elemnts than it should. Images without kbags are still being parsed
 	int elems = asn1ElementsInObject(buf);
-	g_print ("elem: %d\n", elems);
 
 	// Print the Image type, desc and size
 	if (--elems > 0) {
@@ -191,7 +190,7 @@ void handle_all (char *buf)
 		exit(1);
 	}
 
-	g_print ("Image type: %s\n", magic);
+	g_print ("Image type: %s\n\n", magic);
 
 	if (!strcmp(magic, "IMG4")) {
 		handle_img4 (buf);
