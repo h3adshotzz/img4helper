@@ -224,7 +224,7 @@ void asn1PrintIM4MVal (char *buf, char* padding)
 
 		return;
 	} else if (((asn1Tag_t *)buf)->tagNumber != kASN1TagSET) {
-		asn1PrintValue ((asn1Tag_t *)buf);
+		asn1PrintPaddedValue ((asn1Tag_t *)buf, padding);
 		return;
 	}
 
@@ -242,6 +242,37 @@ void asn1PrintIM4MVal (char *buf, char* padding)
 		elem += asn1Len(elem + 1).sizeBytes;
 		asn1PrintRecKeyVal (elem);
 
+	}
+}
+
+void asn1PrintPaddedValue (asn1Tag_t *tag, char* padding)
+{
+	g_print("%s", padding);
+	if (tag->tagNumber == kASN1TagIA5String) {
+		printI5AString (tag);
+	} else if (tag->tagNumber == kASN1TagOCTET) {
+		printHex (tag);
+	} else if (tag->tagNumber == kASN1TagINTEGER) {
+		asn1ElemLen_t len = asn1Len ((char *) tag + 1);
+
+		unsigned char *num = (unsigned char *) tag + 1 + len.sizeBytes;
+		uint64_t pnum = 0;
+
+		while (len.dataLen--) {
+			pnum *= 0x100;
+			pnum += *num++;
+		}
+
+		if (sizeof(uint64_t) == 8) {
+			g_print("%llu", pnum);
+		} else {
+			g_print(" (hex)");
+		}
+
+	} else if (tag->tagNumber == kASN1TagBOOLEAN) {
+		g_print ("%s%s", padding, (*(char *) tag + 2 == 0) ? "false" : "true");
+	} else {
+		g_print ("[Error] Can't print unknown tag %02x\n", *(unsigned char *)tag);
 	}
 }
 
@@ -512,7 +543,9 @@ void printFormattedMANB (const char *buf, char *padding)
 
 		//This prints the property value.
 		manbElm += asn1Len ((char *)manbElm).sizeBytes;
-		//asn1PrintIM4MVal ((char *)manbElm, padding);
+
+		// Bastard function
+		asn1PrintIM4MVal ((char *)manbElm, padding);
 		if (strncmp((char *)&privTag, "PNAM", 4) == 0) {
 			break;
 		}

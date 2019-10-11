@@ -111,6 +111,7 @@ char *asn1ElementAtIndex (const char *buf, int index);
 size_t asn1GetPrivateTagnum (asn1Tag_t *tag, size_t *sizebytes);
 void asn1PrintRecKeyVal (char *buf);
 void asn1PrintIM4MVal (char *buf, char* padding);
+void asn1PrintPaddedValue (asn1Tag_t *tag, char* padding);
 void asn1PrintValue (asn1Tag_t *tag);
 
 ////////////
