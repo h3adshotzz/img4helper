@@ -217,9 +217,9 @@ void asn1PrintIM4MVal (char *buf, char* padding)
 		}
 
 		asn1ElemLen_t len = asn1Len((char *) ++str);
-		g_print("%s %.*s: ", padding, (int) len.dataLen, ((char *) str) + len.sizeBytes);
+		g_print("%.*s: ", (int) len.dataLen, ((char *) str) + len.sizeBytes);
 
-		asn1PrintRecKeyVal (asn1ElementAtIndex(buf, 1));
+		asn1PrintIM4MVal (asn1ElementAtIndex(buf, 1), padding);
 		g_print("\n");
 
 		return;
@@ -235,23 +235,54 @@ void asn1PrintIM4MVal (char *buf, char* padding)
 		char *elem = (char*)asn1ElementAtIndex(buf, i);
 		size_t sb;
 
-		printPrivtag(asn1GetPrivateTagnum((asn1Tag_t *) elem, &sb));
+		//printPrivtag(asn1GetPrivateTagnum((asn1Tag_t *) elem, &sb));
+
+		size_t tmp = asn1GetPrivateTagnum((asn1Tag_t *) elem, &sb);
+		char *ptag = (char *) &tmp;
+		int len = 0;
+		g_print ("\t");
+		while (*ptag) ptag++, len++;
+		while (len--) putchar(*--ptag);
+
 		g_print (": ");
 
 		elem += sb;
 		elem += asn1Len(elem + 1).sizeBytes;
-		asn1PrintRecKeyVal (elem);
+		asn1PrintIM4MVal (elem, padding);
 
 	}
 }
 
 void asn1PrintPaddedValue (asn1Tag_t *tag, char* padding)
 {
-	g_print("%s", padding);
+	char *tmp = padding;
 	if (tag->tagNumber == kASN1TagIA5String) {
-		printI5AString (tag);
+
+		// Create a formatted printi5astring
+		//printI5AString (tag);
+
+		if (tag->tagNumber != kASN1TagIA5String) {
+			g_print ("[Error] Not an IA5String\n");
+			exit(1);
+		}
+
+		asn1ElemLen_t len = asn1Len((char *) ++tag);
+		//putStr(((char*)str)+len.sizeBytes, len.dataLen);
+		// This doesn't control the IM4M tags
+		g_print ("%.*s", (int) len.dataLen, ((char *) tag) + len.sizeBytes);
+
 	} else if (tag->tagNumber == kASN1TagOCTET) {
-		printHex (tag);
+		//printHex (tag);
+
+		if (tag->tagNumber != kASN1TagOCTET) {
+			g_print ("[Error] not an OCTET string\n");
+			exit(1);
+		}
+
+		asn1ElemLen_t len = asn1Len((char *) tag + 1);
+		unsigned char *string = (unsigned char *) tag + len.sizeBytes + 1;
+		while (len.dataLen--) g_print ("%02x", *string++);
+
 	} else if (tag->tagNumber == kASN1TagINTEGER) {
 		asn1ElemLen_t len = asn1Len ((char *) tag + 1);
 
@@ -270,7 +301,7 @@ void asn1PrintPaddedValue (asn1Tag_t *tag, char* padding)
 		}
 
 	} else if (tag->tagNumber == kASN1TagBOOLEAN) {
-		g_print ("%s%s", padding, (*(char *) tag + 2 == 0) ? "false" : "true");
+		g_print ("%s", (*(char *) tag + 2 == 0) ? "false" : "true");
 	} else {
 		g_print ("[Error] Can't print unknown tag %02x\n", *(unsigned char *)tag);
 	}
