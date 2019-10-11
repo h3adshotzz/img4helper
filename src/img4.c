@@ -61,12 +61,10 @@ void handle_im4p (char *buf, int tabs)
 
 	// Print the Image type, desc and size
 	if (--elems > 0) {
-		g_print ("%s", padding);
-		printStringWithKey("Type", (asn1Tag_t *) asn1ElementAtIndex(buf, 1));
+		printStringWithKey("Type", (asn1Tag_t *) asn1ElementAtIndex(buf, 1), padding);
 	}
 	if (--elems > 0) {
-		g_print ("%s", padding);
-		printStringWithKey("Desc", (asn1Tag_t *) asn1ElementAtIndex(buf, 2));
+		printStringWithKey("Desc", (asn1Tag_t *) asn1ElementAtIndex(buf, 2), padding);
 	}
 	if (--elems > 0) {
 
@@ -82,7 +80,7 @@ void handle_im4p (char *buf, int tabs)
 	// Check for KBAG values. There should be two on encrypted images, with the first being PRODUCT
 	//      and the seccond being DEVELOPMENT.
 	if (--elems > 0) {
-		printFormattedKBAG ((char *) asn1ElementAtIndex(buf, 4), padding);
+		img4PrintKeybag ((char *) asn1ElementAtIndex(buf, 4), padding);
 	} else {
 		g_print ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
 	}
@@ -130,7 +128,8 @@ void handle_im4m(char *buf, int tabs)
 	// Print the IM4M Version
 	if (--elems > 0) {
 		g_print("%sVersion: ", padding);
-		printNumber((asn1Tag_t *) asn1ElementAtIndex(buf, 1));
+		asn1PrintNumber((asn1Tag_t *) asn1ElementAtIndex(buf, 1), "");
+		putchar('\n');
 		putchar('\n');
 	}
 
@@ -147,14 +146,13 @@ void handle_im4m(char *buf, int tabs)
 		asn1Tag_t *privtag = manbset + asn1Len((char *) manbset + 1).sizeBytes + 1;
 
 		size_t sb;
-		g_print("%s", padding);
-		printPrivtag(asn1GetPrivateTagnum(privtag++, &sb));
+		asn1PrintPrivtag(asn1GetPrivateTagnum(privtag++, &sb), padding);
 		g_print(":\n");
 
 		char *manbseq = (char *)privtag + sb;
 		manbseq += asn1Len(manbseq).sizeBytes + 1;
 
-		printFormattedMANB(manbseq, padding);
+		img4PrintManifestBody(manbseq, padding);
 	}
 
 }
@@ -175,7 +173,7 @@ void handle_img4 (char *buf)
 	handle_im4p (getIM4PFromIMG4 (buf), 1);
 
 	// Make some space between the IM4M and IM4P
-	g_print ("\n\n");
+	g_print ("\n");
 
 	// Handle the IM4M
 	handle_im4m (getIM4MFromIMG4 (buf), 1);
@@ -261,6 +259,9 @@ void print_img4 (Img4PrintType type, char* filename)
 		g_print("[Error] Blank file\n");
 		exit(1);
 	}
+
+	// Print the loaded file name and the size
+	g_print ("Loaded: %s\n", filename);
 
 	// Switch through the possible PRINT operations
 	switch (type) {

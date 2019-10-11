@@ -57,3 +57,6 @@ build/
 
 # Fuck off DS Store
 .DS_Store
+
+# VSCode config
+.vscode/

@@ -27,6 +27,16 @@
 
 #include "asn1.h"
 
+
+/////////////////////////////////////////////////
+/*				 ASN1 Parser    			   */
+/////////////////////////////////////////////////
+
+
+/**
+ * 
+ * 
+ */
 asn1ElemLen_t asn1Len (const char buf[4])
 {
 	asn1Length_t *tmp = (asn1Length_t *)buf;
@@ -53,6 +63,46 @@ asn1ElemLen_t asn1Len (const char buf[4])
 }
 
 
+/**
+ * 
+ */
+size_t asn1GetPrivateTagnum (asn1Tag_t *tag, size_t *sizebytes)
+{
+	if (*(unsigned char *) tag != 0xff) {
+		g_print ("[Error] Not a private TAG 0x%02x\n", *(unsigned int *) tag);
+		exit(1);
+	}
+
+	size_t sb = 1;
+	asn1ElemLen_t taglen = asn1Len((char *)++tag);
+	taglen.sizeBytes -= 1;
+
+	if (taglen.sizeBytes != 4) {
+		/* 
+         WARNING: seems like apple's private tag is always 4 bytes long
+         i first assumed 0x84 can be parsed as long size with 4 bytes, 
+         but 0x86 also seems to be 4 bytes size even if one would assume it means 6 bytes size.
+         This opens the question what the 4 or 6 nibble means.
+        */
+		taglen.sizeBytes = 4;
+	}
+
+	size_t tagname = 0;
+	do {
+		tagname *= 0x100;
+		tagname >>= 1;
+		tagname += ((asn1PrivateTag_t *)tag)->num;
+		sb++;
+	} while (((asn1PrivateTag_t *) tag++)->more);
+
+	if (sizebytes) *sizebytes = sb;
+	return tagname;
+}
+
+
+/**
+ * 
+ */
 char *asn1GetString (char *buf, char **outstring, size_t *strlen)
 {
 	asn1Tag_t *tag = (asn1Tag_t *)buf;
@@ -71,7 +121,11 @@ char *asn1GetString (char *buf, char **outstring, size_t *strlen)
 }
 
 
-int asn1ElementAtIndexWithCounter(const char *buf, int index, asn1Tag_t **tagret){
+/**
+ * 
+ */
+int asn1ElementAtIndexWithCounter(const char *buf, int index, asn1Tag_t **tagret)
+{
     int ret = 0;
     
     if (!((asn1Tag_t *)buf)->isConstructed) {
@@ -118,11 +172,9 @@ int asn1ElementAtIndexWithCounter(const char *buf, int index, asn1Tag_t **tagret
 }
 
 
-int asn1ElementsInObject (const char *buf)
-{
-	return asn1ElementAtIndexWithCounter (buf, -1, NULL);
-}
-
+/**
+ * 
+ */
 char* asn1ElementAtIndex (const char *buf, int index)
 {
 	asn1Tag_t *ret;
@@ -130,219 +182,235 @@ char* asn1ElementAtIndex (const char *buf, int index)
 	return (char*) ret;
 }
 
-size_t asn1GetPrivateTagnum (asn1Tag_t *tag, size_t *sizebytes)
+
+/**
+ * 
+ */
+int asn1ElementsInObject (const char *buf)
 {
-	if (*(unsigned char *) tag != 0xff) {
-		g_print ("[Error] Not a private TAG 0x%02x\n", *(unsigned int *) tag);
-		exit(1);
-	}
-
-	size_t sb = 1;
-	asn1ElemLen_t taglen = asn1Len((char *)++tag);
-	taglen.sizeBytes -= 1;
-
-	if (taglen.sizeBytes != 4) {
-		/* 
-         WARNING: seems like apple's private tag is always 4 bytes long
-         i first assumed 0x84 can be parsed as long size with 4 bytes, 
-         but 0x86 also seems to be 4 bytes size even if one would assume it means 6 bytes size.
-         This opens the question what the 4 or 6 nibble means.
-        */
-		taglen.sizeBytes = 4;
-	}
-
-	size_t tagname = 0;
-	do {
-		tagname *= 0x100;
-		tagname >>= 1;
-		tagname += ((asn1PrivateTag_t *)tag)->num;
-		sb++;
-	} while (((asn1PrivateTag_t *) tag++)->more);
-
-	if (sizebytes) *sizebytes = sb;
-	return tagname;
-}
-
-void asn1PrintRecKeyVal (char *buf)
-{
-	if (((asn1Tag_t *) buf)->tagNumber == kASN1TagSEQUENCE) {
-		int i;
-		if ((i = asn1ElementsInObject(buf)) != 2) {
-			g_print ("[Error] Expecting 2 elements, found %d\n", i);
-			exit(1);
-		}
-
-		printI5AString((asn1Tag_t *) asn1ElementAtIndex(buf, 0));
-		g_print(": ");
-
-		asn1PrintRecKeyVal (asn1ElementAtIndex(buf, 1));
-		g_print("\n");
-
-		return;
-	} else if (((asn1Tag_t *)buf)->tagNumber != kASN1TagSET) {
-		asn1PrintValue ((asn1Tag_t *)buf);
-		return;
-	}
-
-	// Must be a kASN1TagSET
-	g_print("------------------------------\n");
-	for (int i = 0; i < asn1ElementsInObject(buf); i++) {
-
-		char *elem = (char*)asn1ElementAtIndex(buf, i);
-		size_t sb;
-
-		printPrivtag(asn1GetPrivateTagnum((asn1Tag_t *) elem, &sb));
-		g_print (": ");
-
-		elem += sb;
-		elem += asn1Len(elem + 1).sizeBytes;
-		asn1PrintRecKeyVal (elem);
-
-	}
-}
-
-void asn1PrintIM4MVal (char *buf, char* padding)
-{
-	if (((asn1Tag_t *) buf)->tagNumber == kASN1TagSEQUENCE) {
-		int i;
-		if ((i = asn1ElementsInObject(buf)) != 2) {
-			g_print ("[Error] Expecting 2 elements, found %d\n", i);
-			exit(1);
-		}
-
-		asn1Tag_t *str = (asn1Tag_t *) asn1ElementAtIndex(buf, 0);
-		if (str->tagNumber != kASN1TagIA5String) {
-			g_print ("[Error] Not an IA5String\n");
-			exit(1);
-		}
-
-		asn1ElemLen_t len = asn1Len((char *) ++str);
-		g_print("%.*s: ", (int) len.dataLen, ((char *) str) + len.sizeBytes);
-
-		asn1PrintIM4MVal (asn1ElementAtIndex(buf, 1), padding);
-		g_print("\n");
-
-		return;
-	} else if (((asn1Tag_t *)buf)->tagNumber != kASN1TagSET) {
-		asn1PrintPaddedValue ((asn1Tag_t *)buf, padding);
-		return;
-	}
-
-	// Must be a kASN1TagSET
-	g_print("------------------------------\n");
-	for (int i = 0; i < asn1ElementsInObject(buf); i++) {
-
-		char *elem = (char*)asn1ElementAtIndex(buf, i);
-		size_t sb;
-
-		//printPrivtag(asn1GetPrivateTagnum((asn1Tag_t *) elem, &sb));
-
-		size_t tmp = asn1GetPrivateTagnum((asn1Tag_t *) elem, &sb);
-		char *ptag = (char *) &tmp;
-		int len = 0;
-		g_print ("\t");
-		while (*ptag) ptag++, len++;
-		while (len--) putchar(*--ptag);
-
-		g_print (": ");
-
-		elem += sb;
-		elem += asn1Len(elem + 1).sizeBytes;
-		asn1PrintIM4MVal (elem, padding);
-
-	}
-}
-
-void asn1PrintPaddedValue (asn1Tag_t *tag, char* padding)
-{
-	char *tmp = padding;
-	if (tag->tagNumber == kASN1TagIA5String) {
-
-		// Create a formatted printi5astring
-		//printI5AString (tag);
-
-		if (tag->tagNumber != kASN1TagIA5String) {
-			g_print ("[Error] Not an IA5String\n");
-			exit(1);
-		}
-
-		asn1ElemLen_t len = asn1Len((char *) ++tag);
-		//putStr(((char*)str)+len.sizeBytes, len.dataLen);
-		// This doesn't control the IM4M tags
-		g_print ("%.*s", (int) len.dataLen, ((char *) tag) + len.sizeBytes);
-
-	} else if (tag->tagNumber == kASN1TagOCTET) {
-		//printHex (tag);
-
-		if (tag->tagNumber != kASN1TagOCTET) {
-			g_print ("[Error] not an OCTET string\n");
-			exit(1);
-		}
-
-		asn1ElemLen_t len = asn1Len((char *) tag + 1);
-		unsigned char *string = (unsigned char *) tag + len.sizeBytes + 1;
-		while (len.dataLen--) g_print ("%02x", *string++);
-
-	} else if (tag->tagNumber == kASN1TagINTEGER) {
-		asn1ElemLen_t len = asn1Len ((char *) tag + 1);
-
-		unsigned char *num = (unsigned char *) tag + 1 + len.sizeBytes;
-		uint64_t pnum = 0;
-
-		while (len.dataLen--) {
-			pnum *= 0x100;
-			pnum += *num++;
-		}
-
-		if (sizeof(uint64_t) == 8) {
-			g_print("%llu", pnum);
-		} else {
-			g_print(" (hex)");
-		}
-
-	} else if (tag->tagNumber == kASN1TagBOOLEAN) {
-		g_print ("%s", (*(char *) tag + 2 == 0) ? "false" : "true");
-	} else {
-		g_print ("[Error] Can't print unknown tag %02x\n", *(unsigned char *)tag);
-	}
-}
-
-void asn1PrintValue (asn1Tag_t *tag)
-{
-	if (tag->tagNumber == kASN1TagIA5String) {
-		printI5AString (tag);
-	} else if (tag->tagNumber == kASN1TagOCTET) {
-		printHex (tag);
-	} else if (tag->tagNumber == kASN1TagINTEGER) {
-		asn1ElemLen_t len = asn1Len ((char *) tag + 1);
-
-		unsigned char *num = (unsigned char *) tag + 1 + len.sizeBytes;
-		uint64_t pnum = 0;
-
-		while (len.dataLen--) {
-			pnum *= 0x100;
-			pnum += *num++;
-		}
-
-		if (sizeof(uint64_t) == 8) {
-			g_print("%llu", pnum);
-		} else {
-			g_print(" (hex)");
-		}
-
-	} else if (tag->tagNumber == kASN1TagBOOLEAN) {
-		g_print ("%s", (*(char *) tag + 2 == 0) ? "false" : "true");
-	} else {
-		g_print ("[Error] Can't print unknown tag %02x\n", *(unsigned char *)tag);
-	}
+	return asn1ElementAtIndexWithCounter (buf, -1, NULL);
 }
 
 
+/////////////////////////////////////////////////
+/*				 ASN1 Printer     			   */
+/////////////////////////////////////////////////
 
-////////////////////
 
-/* These functions are not ASN.1 specific but are most appropriate in asn1.c */
+/**
+ *  asn1PrintKeyValue
+ *  Desc:   Print a given IA5String value with the set padding
+ * 
+ *  Args:
+ *      str:        The ASN1 value to print
+ *      padding:    The space to leave before the value is printed.
+ * 
+ */
+void asn1PrintIA5String (asn1Tag_t *str, char *padding)
+{
+    // Check that the given tag is a IA5String
+    if (str->tagNumber != kASN1TagIA5String) {
+        g_print ("%s[Error] Value not an IA5String\n", padding);
+        exit(1);
+    }
 
+    // Get the length of the string and print
+    asn1ElemLen_t len = asn1Len ((char *) ++str);
+    g_print ("%s%.*s", padding, (int) len.dataLen, ((char *) str) + len.sizeBytes);
+}
+
+
+/**
+ *  asn1PrintOctet
+ *  Desc:   Print a given Octet value with the set padding
+ * 
+ *  Args:
+ *      str:        The ASN1 Octet to print
+ *      padding:    The space to leave before the value is printed.
+ * 
+ */
+void asn1PrintOctet (asn1Tag_t *str, char *padding)
+{
+    // Check the tag is actually an OCTET value
+    if (str->tagNumber != kASN1TagOCTET) {
+        g_print ("%s[Error] Not an OCTET string\n", padding);
+        exit(1);
+    }
+
+    // Tihmstar magic
+    g_print ("%s", padding);
+    asn1ElemLen_t len = asn1Len ((char *) str + 1);
+    unsigned char *string = (unsigned char *) str + len.sizeBytes +1;
+    while (len.dataLen--) g_print ("%02x", *string++);
+}
+
+
+/**
+ *  asn1PrintOctet
+ *  Desc:   Print a given Octet value with the set padding
+ * 
+ *  Args:
+ *      str:        The ASN1 Octet to print
+ *      padding:    The space to leave before the value is printed.
+ * 
+ */
+void asn1PrintNumber (asn1Tag_t *str, char *padding)
+{
+    // Check if the tag is a number
+    if (str->tagNumber != kASN1TagINTEGER) {
+        g_print ("%s[Error] Tag is not an Integer\n", padding);
+        return;
+    }
+
+    // Tihmstar magic
+    asn1ElemLen_t len = asn1Len ((char *) ++str);
+    uint32_t num = 0;
+    while (len.sizeBytes--) {
+        num *= 0x100;
+        num += *(unsigned char*) ++str;
+    }
+    g_print ("%s%u", padding, num);
+}
+
+
+/**
+ *  asn1PrintPrivtag
+ *  Desc:   Print a given Private Tag value with the set padding
+ * 
+ *  Args:
+ *      str:        The Private Tag to print
+ *      padding:    The space to leave before the value is printed.
+ * 
+ */
+void asn1PrintPrivtag (size_t privTag, char *padding)
+{
+    char *ptag = (char *) &privTag;
+    int len = 0;
+    while (*ptag) ptag++, len++;
+
+    g_print ("%s", padding);
+    while (len--) putchar(*--ptag);
+}
+
+
+/**
+ *  asn1PrintValue
+ *  Desc:   Print a given ASN1 Tag value
+ * 
+ *  Args:
+ *      tag:        The tag to print
+ *      padding:    The space to leave before the value is printed
+ * 
+ */
+void asn1PrintValue (asn1Tag_t *tag, char *padding)
+{
+    // Determine if the tag is either HEX, IA5String, Integer or Boolean
+    if (tag->tagNumber == kASN1TagIA5String) {
+        asn1PrintIA5String (tag, padding);
+    } else if (tag->tagNumber == kASN1TagOCTET) {
+        asn1PrintOctet (tag, padding);
+    } else if (tag->tagNumber == kASN1TagINTEGER) {
+
+        // Not entirely sure how this works. 
+        asn1ElemLen_t len = asn1Len ((char *) tag + 1);
+        unsigned char *num = (unsigned char *) tag + 1 + len.sizeBytes;
+        uint64_t pnum = 0;
+
+        while (len.dataLen--) {
+            pnum *= 0x100;
+            pnum += *num++;
+        }
+
+        if (sizeof (uint64_t) == 8) {
+            g_print ("%llu", pnum);
+        } else {
+            g_print (" (hex)");
+        }
+
+    } else if (tag->tagNumber == kASN1TagBOOLEAN) {
+        g_print ("%s", (*(char *) tag + 2 == 0) ? "false" : "true");
+    } else {
+        g_print ("%s[Error] Can't print tag of unknown type %02x\n", padding, *(unsigned char *) tag);
+    }
+}
+
+
+/**
+ *  asn1PrintKeyValue
+ *  Desc:   Print the value of the given buffer with the set padding
+ * 
+ *  Args:
+ *      buf:        The ASN1 value to print
+ *      padding:    The space to leave before the value is printed.
+ * 
+ */
+void asn1PrintKeyValue (char *buf, char *padding)
+{
+
+    /**
+     *  See if the buf is a sequence or set.
+     */
+    if (((asn1Tag_t *) buf)->tagNumber == kASN1TagSEQUENCE) {
+
+        // Check the amount of elements in the buffer is as it should be
+        int i;
+        if ((i = asn1ElementsInObject(buf)) != 2) {
+            g_print ("%s[Error] Expecting two elements, found %d\n", padding, i);
+            exit(1);
+        }
+
+        // Print the IA5String
+        asn1PrintIA5String ((asn1Tag_t *) asn1ElementAtIndex (buf, 0), padding);
+        g_print (": ");
+
+        // This should now print the value of the key.
+        asn1PrintKeyValue (asn1ElementAtIndex(buf, 1), padding);
+        g_print ("\n");
+
+        return;
+
+    } else if (((asn1Tag_t *) buf)->tagNumber != kASN1TagSET) {
+
+        // Just print the value of the buffer
+        asn1PrintValue ((asn1Tag_t *) buf, padding);
+        return;
+
+    }
+
+
+    // If we got here, the buffer/tag is not a Sequence so must be a Set.
+    g_print ("------------------------------\n");
+
+    // Go through any tags in the set.
+    for (int i = 0; i < asn1ElementsInObject(buf); i++) {
+
+        // Fetch the element for i in the buffer
+        char *elem = (char *) asn1ElementAtIndex (buf, i);
+        size_t sb;
+        
+        // Print the tag name
+        asn1PrintPrivtag (asn1GetPrivateTagnum ((asn1Tag_t *) elem, &sb), padding);
+        g_print (": ");
+
+        // Calculate where the value is
+        elem += sb;
+        elem += asn1Len(elem + 1).sizeBytes;
+
+        // Print it
+        asn1PrintKeyValue (elem, padding);
+    }
+
+}
+
+
+/////////////////////////////////////////////////
+/*				 IMG4 Parser     			   */
+/////////////////////////////////////////////////
+
+
+/**
+ * 
+ */
 int getSequenceName (const char *buf, char **name, size_t *namelen)
 {
 	int err = 0;
@@ -365,6 +433,35 @@ int getSequenceName (const char *buf, char **name, size_t *namelen)
 	return err;
 }
 
+
+/**
+ * 
+ */
+char *getImageFileType (char *buf)
+{
+    char *magic;
+	size_t l;
+
+	//
+	getSequenceName(buf, &magic, &l);
+	if (!strncmp("IMG4", magic, l)) {
+		return "IMG4";
+	} else if (!strncmp("IM4M", magic, l)) {
+		return "IM4M";
+	} else if (!strncmp("IM4P", magic, l)) {
+		return "IM4P";
+	} else if (!strncmp("IM4R", magic, l)) {
+		return "IM4R";
+	} else {
+		g_print ("[Error] Unexpected tag, got \"%s\"\n", magic);
+		exit(1);
+	}
+}
+
+
+/**
+ * 
+ */
 char *getIM4PFromIMG4 (char *buf)
 {
 	char *magic;
@@ -395,6 +492,10 @@ char *getIM4PFromIMG4 (char *buf)
 
 }
 
+
+/**
+ * 
+ */
 char *getIM4MFromIMG4 (char *buf)
 {
 	char *magic;
@@ -430,102 +531,82 @@ char *getIM4MFromIMG4 (char *buf)
 }
 
 
-// This should return an array of element types [im4p, im4m, im4r]
-void getElementsFromIMG4 (char *buf)
+/////////////////////////////////////////////////
+/*				 IMG4 Printer     			   */
+/////////////////////////////////////////////////
+
+
+/**
+ * 
+ */
+void printStringWithKey (char* key, asn1Tag_t *string, char *padding)
 {
-	char *magic;
-	size_t l;
+	char *str = 0;
+	size_t len;
 
-	//
-	getSequenceName(buf, &magic, &l);
-	if (strncmp("IMG4", magic, l)) {
-		g_print ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
-		return;
-	}
+	asn1GetString((char *)string, &str, &len);
 
-	//
-	int elemCnt = asn1ElementsInObject (buf);
-	for (int i = 0; i < elemCnt; i++) {
-		char *ret = (char *)asn1ElementAtIndex(buf, i);
-		ret += asn1Len(ret + 1).sizeBytes + 1;
-		char *tmp;
-		getSequenceName (ret, &tmp, &l);
-		g_print ("[%d]: %s\n", i, tmp);
-	}
-}
-
-char* getImageFileType (char *buf)
-{
-	char *magic;
-	size_t l;
-
-	//
-	getSequenceName(buf, &magic, &l);
-	if (!strncmp("IMG4", magic, l)) {
-		return "IMG4";
-	} else if (!strncmp("IM4M", magic, l)) {
-		return "IM4M";
-	} else if (!strncmp("IM4P", magic, l)) {
-		return "IM4P";
-	} else if (!strncmp("IM4R", magic, l)) {
-		return "IM4R";
-	} else {
-		g_print ("[Error] Unexpected tag, got \"%s\"\n", magic);
-		exit(1);
-	}
+	printf("%s%s: ", padding, key);
+	printf("%.*s", (int)len, str);
+	printf("\n");
 }
 
 
-// Printing functions
-
-void printHex (asn1Tag_t *str)
+/**
+ * 
+ */
+void img4PrintKeybag (char *octet, char *padding)
 {
-	if (str->tagNumber != kASN1TagOCTET) {
-		g_print ("[Error] not an OCTET string\n");
+	// Check if the octet is a kASN1TagOCTET
+	if (((asn1Tag_t *) octet)->tagNumber != kASN1TagOCTET) {
+		g_print ("%s[Error] not an OCTET\n", padding);
 		exit(1);
 	}
 
-	asn1ElemLen_t len = asn1Len((char *) str + 1);
-	unsigned char *string = (unsigned char *) str + len.sizeBytes + 1;
-	while (len.dataLen--) g_print ("%02x", *string++);
-}
+	// Get the octet length
+	asn1ElemLen_t octetLen = asn1Len(++octet);
+	octet += octetLen.sizeBytes;
 
-void printNumber (asn1Tag_t *tag)
-{
-	if (tag->tagNumber != kASN1TagINTEGER) {
-		g_print("[Error] Tag not an Integer\n");
-		return;
+	// Parse the KBAG Values
+	int subseqs = asn1ElementsInObject (octet);
+	for (int i = 0; i < subseqs; i++) {
+
+		// Pick the value
+		char *s = (char *)asn1ElementAtIndex (octet, i);
+		int elems = asn1ElementsInObject(s);
+
+		// Parse it
+		if (elems--) {
+			asn1Tag_t *num = (asn1Tag_t *) asn1ElementAtIndex (s, 0);
+			if (num->tagNumber != kASN1TagINTEGER) {
+				g_print ("%s[Warning] Skipping unexpected tag\n", padding);
+			} else {
+				if (i == 0) {
+					g_print ("%sKBAG Production [1]:\n", padding);
+				} else if (i == 1) {
+					g_print ("%sKBAG Development [2]:\n", padding);
+				} else {
+					char n = *(char *)(num + 2);
+					g_print ("%sKBAG Unknown: [%d]:\n", padding, n);
+				}
+			}
+		}
+
+		// Print the KBAG Hex string
+		if (elems--) {
+			asn1PrintOctet((asn1Tag_t *) asn1ElementAtIndex(s, 1), padding);
+			asn1PrintOctet((asn1Tag_t *) asn1ElementAtIndex(s, 2), "");
+			putchar('\n');
+			putchar('\n');
+		}
 	}
-
-	asn1ElemLen_t len = asn1Len((char *) ++tag);
-	uint32_t num = 0;
-	while (len.sizeBytes--) {
-		num *= 0x100;
-		num += *(unsigned char*) ++tag;
-	}
-	printf("%u", num);
 }
 
-void printI5AString (asn1Tag_t *str)
-{
-	if (str->tagNumber != kASN1TagIA5String) {
-		g_print ("[Error] Not an IA5String\n");
-		exit(1);
-	}
 
-	asn1ElemLen_t len = asn1Len((char *) ++str);
-	putStr(((char*)str)+len.sizeBytes, len.dataLen);
-}
-
-void printPrivtag (size_t privTag)
-{
-	char *ptag = (char *) &privTag;
-	int len = 0;
-	while (*ptag) ptag++, len++;
-	while (len--) putchar(*--ptag);
-}
-
-void printFormattedMANB (const char *buf, char *padding)
+/**
+ * 
+ */
+void img4PrintManifestBody (const char *buf, char *padding)
 {
 	// Get the buf magic
 	char *magic;
@@ -576,111 +657,10 @@ void printFormattedMANB (const char *buf, char *padding)
 		manbElm += asn1Len ((char *)manbElm).sizeBytes;
 
 		// Bastard function
-		asn1PrintIM4MVal ((char *)manbElm, padding);
+		asn1PrintKeyValue ((char *)manbElm, padding);
 		if (strncmp((char *)&privTag, "PNAM", 4) == 0) {
 			break;
 		}
 	}
 
-}
-
-void printStringWithKey (char* key, asn1Tag_t *string)
-{
-	char *str = 0;
-	size_t len;
-
-	asn1GetString((char *)string, &str, &len);
-
-	printf("%s: ", key);
-	printf("%.*s", (int)len, str);
-	printf("\n");
-}
-
-void printFormattedKBAG (char *octet, char *padding)
-{
-	// Check if the octet is a kASN1TagOCTET
-	if (((asn1Tag_t *) octet)->tagNumber != kASN1TagOCTET) {
-		g_print ("%s[Error] not an OCTET\n", padding);
-		exit(1);
-	}
-
-	// Get the octet length
-	asn1ElemLen_t octetLen = asn1Len(++octet);
-	octet += octetLen.sizeBytes;
-
-	// Parse the KBAG Values
-	int subseqs = asn1ElementsInObject (octet);
-	for (int i = 0; i < subseqs; i++) {
-
-		// Pick the value
-		char *s = (char *)asn1ElementAtIndex (octet, i);
-		int elems = asn1ElementsInObject(s);
-
-		// Parse it
-		if (elems--) {
-			asn1Tag_t *num = (asn1Tag_t *) asn1ElementAtIndex (s, 0);
-			if (num->tagNumber != kASN1TagINTEGER) {
-				g_print ("%s[Warning] Skipping unexpected tag\n", padding);
-			} else {
-				if (i == 0) {
-					g_print ("%sKBAG Production [1]:\n", padding);
-				} else if (i == 1) {
-					g_print ("%sKBAG Development [2]:\n", padding);
-				} else {
-					char n = *(char *)(num + 2);
-					g_print ("%sKBAG Unknown: [%d]:\n", padding, n);
-				}
-			}
-		}
-
-		// Print the KBAG Hex string
-		if (elems--) {
-			g_print("%s", padding);
-			printHex((asn1Tag_t *) asn1ElementAtIndex(s, 1));
-			printHex((asn1Tag_t *) asn1ElementAtIndex(s, 2));
-			putchar('\n');
-			putchar('\n');
-		}
-	}
-}
-
-void printKBAG (char* octet)
-{
-
-	// Check if the given octet is in fact a kASN1TagOCTET
-	if (((asn1Tag_t *) octet)->tagNumber != kASN1TagOCTET) {
-		g_print ("[Error] not an OCTET\n");
-		return;
-	}
-
-	// Get the Octet length
-	asn1ElemLen_t octetlen = asn1Len(++octet);
-	octet += octetlen.sizeBytes;
-
-	// Parse the KBAG value(s)
-	int subseqs = asn1ElementsInObject(octet);
-	for (int i = 0; i < subseqs; i++) {
-
-		// Pick the first/next KBAG value
-		char *s = (char *)asn1ElementAtIndex(octet, i);
-		int elems = asn1ElementsInObject(s);
-
-		// Try to parse it
-		if (elems--) {
-			asn1Tag_t *num = (asn1Tag_t *) asn1ElementAtIndex(s, 0);
-			if (num->tagNumber != kASN1TagINTEGER) {
-				g_print ("[Warning] Skipping unexpected tag\n");
-			} else {
-				char n = *(char *)(num + 2);
-				g_print ("num: %d\n", n);
-			}
-		}
-
-		// Print the hex strings
-		if (elems--) {
-			printHex((asn1Tag_t *) asn1ElementAtIndex(s, 1));
-			printHex((asn1Tag_t *) asn1ElementAtIndex(s, 2));
-			putchar('\n');
-		}
-	}
 }

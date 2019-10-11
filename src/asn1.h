@@ -38,6 +38,10 @@
 
 typedef unsigned char byte;
 
+// Printing padded text
+#define kOutputPadding1				"\t";
+#define kOutputPaddingNone			"";
+
 // Tag Class
 #define kASN1TagClassUniversal       0
 #define kASN1TagClassApplication     1
@@ -103,34 +107,53 @@ typedef struct {
 } asn1PrivateTag_t;
 
 
-// Function definitions
-asn1ElemLen_t asn1Len (const char buf[4]);
-char *asn1GetString (char *buf, char **outstring, size_t *strlen);
-int asn1ElementsInObject (const char *buf);
-char *asn1ElementAtIndex (const char *buf, int index);
-size_t asn1GetPrivateTagnum (asn1Tag_t *tag, size_t *sizebytes);
-void asn1PrintRecKeyVal (char *buf);
-void asn1PrintIM4MVal (char *buf, char* padding);
-void asn1PrintPaddedValue (asn1Tag_t *tag, char* padding);
-void asn1PrintValue (asn1Tag_t *tag);
+/////////////////////////////////////////////////
+/*				 ASN1 Parser    			   */
+/////////////////////////////////////////////////
+
+asn1ElemLen_t	asn1Len (const char buf[4]);
+size_t			asn1GetPrivateTagnum (asn1Tag_t *tag, size_t *size_bytes);
+char		   *asn1GetString (char *buf, char **outstring, size_t *strlen);
+char		   *asn1ElementAtIndex (const char *buf, int index);
+int			    asn1ElementsInObject (const char *buf);
+int				asn1ElementAtIndexWithCounter(const char *buf, int index, asn1Tag_t **tagret);
+
+
+/////////////////////////////////////////////////
+/*				 ASN1 Printer     			   */
+/////////////////////////////////////////////////
+
+void			asn1PrintPrivtag (size_t privTag, char *padding);
+void 			asn1PrintKeyValue (char *buf, char *padding);
+void			asn1PrintValue (asn1Tag_t *tag, char *padding);
+void			asn1PrintIA5String (asn1Tag_t *str, char *padding);
+void			asn1PrintOctet (asn1Tag_t *str, char *padding);
+void			asn1PrintNumber (asn1Tag_t *str, char *padding);
+
+
+/////////////////////////////////////////////////
+/*				 IMG4 Parser     			   */
+/////////////////////////////////////////////////
+
+int				getSequenceName (const char *buf, char **name, size_t *namelen);
+
+char 		    *getImageFileType (char *buf);
+char 			*getIM4PFromIMG4 (char *buf);
+char 			*getIM4MFromIMG4 (char *buf);
+
+
+/////////////////////////////////////////////////
+/*				 IMG4 Printer     			   */
+/////////////////////////////////////////////////
+
+void 			printStringWithKey (char* key, asn1Tag_t *string, char *padding);
+
+void 			img4PrintKeybag (char *octet, char *padding);
+void 			img4PrintManifestBody (const char *buf, char *padding);
 
 ////////////
 
-int getSequenceName (const char *buf, char **name, size_t *namelen);
-char *getIM4PFromIMG4 (char *buf);
-char *getIM4MFromIMG4 (char *buf);
+
 void getElementsFromIMG4 (char *buf);
-char *getImageFileType (char *buf);
-
-void printI5AString (asn1Tag_t *str);
-void printHex (asn1Tag_t *str);
-void printNumber (asn1Tag_t *str);
-void printPrivtag (size_t privTag);
-
-void printStringWithKey (char* key, asn1Tag_t *string);
-void printKBAG (char *octet);
-void printFormattedKBAG (char *octet, char *padding);
-void printMANB (const char *buf);
-void printFormattedMANB (const char *buf, char *padding);
 
 #endif
