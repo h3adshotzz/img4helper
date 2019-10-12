@@ -193,9 +193,9 @@ void handle_all (char *buf)
 	if (!strcmp(magic, "IMG4")) {
 		handle_img4 (buf);
 	} else if (!strcmp(magic, "IM4P")) {
-		handle_im4p (buf, 0);
+		handle_im4p (buf, 1);
 	} else if (!strcmp(magic, "IM4M")) {
-		handle_im4m (buf, 0);
+		handle_im4m (buf, 1);
 	} else if (!strcmp(magic, "IM4R")) {
 		//
 	} else {
@@ -241,8 +241,7 @@ char* read_from_file (const char *path)
  */
 void print_img4 (Img4PrintType type, char* filename)
 {
-	// TODO: Add parsing for IM4M
-	// TODO: Idk, think of something else to add.
+	// TODO: IM4R Parsing
 
 
 	// Check the filename given is not NULL
@@ -260,27 +259,83 @@ void print_img4 (Img4PrintType type, char* filename)
 		exit(1);
 	}
 
+	// Get the files type
+	char *magic = getImageFileType (buf);
+	if (!magic) {
+		g_print ("[Error] Input file format not recognised\n");
+		exit(1);
+	}
+
 	// Print the loaded file name and the size
 	g_print ("Loaded: %s\n", filename);
+	g_print ("Image4 Type: %s\n\n", magic);
 
 	// Switch through the possible PRINT operations
 	switch (type) {
 		case IMG4_PRINT_ALL:
 
-			// Handle everything
-			handle_all (buf);
+			// Check what image we're dealing with, then handle as appropriate
+			if (!strcmp (magic, "IMG4")) {
+
+				// Because this in a full img4, we have to extract everything from it.
+				char *im4p = getIM4PFromIMG4 (buf);
+				char *im4m = getIM4MFromIMG4 (buf);
+				//char *im4r = getIM4RFromIMG4 (buf);
+
+				// Print the IMG4 banner
+				g_print ("IMG4: ------\n");
+
+				// Handle the payload first
+				handle_im4p (im4p, 1);
+
+				// Make some space between the two
+				g_print ("\n");
+
+				// Handle the IM4M next
+				handle_im4m (im4m, 1);
+
+				// More space
+				g_print ("\n");
+
+				// Lastly, handle the IM4R
+				//handle_imr4 (im4r, 1);
+
+			} else if (!strcmp(magic, "IM4P")) {
+				handle_im4p (buf, 1);
+			} else if (!strcmp(magic, "IM4M")) {
+				handle_im4m (buf, 1);
+			} else if (!strcmp(magic, "IM4R")) {
+				//
+			} else {
+				g_print ("[Error] Unrecognised image\n");
+				exit(1);
+			}
 
 			break;
 		case IMG4_PRINT_IM4P:
 
-			// Handle the IM4P
-			handle_im4p(buf, 0);
+			// Verify the image is an IM4P or an IMG4
+			if (!strcmp (magic, "IMG4")) {
+				handle_im4p (getIM4PFromIMG4 (buf), 1);
+			} else if (!strcmp (magic, "IM4P")) {
+				handle_im4p (buf, 1);
+			} else {
+				g_print ("[Error] The file does not contain an IM4P (%s)\n", magic);
+				exit(1);
+			}
 
 			break;
 		case IMG4_PRINT_IM4M:
 
-			// Handle the IM4M
-			handle_im4m(buf, 0);
+			// Verify the image is an IM4M or an IMG4
+			if (!strcmp (magic, "IMG4")) {
+				handle_im4m (getIM4MFromIMG4 (buf), 1);
+			} else if (!strcmp (magic, "IM4M")) {
+				handle_im4m (buf, 1);
+			} else {
+				g_print ("[Error] The file does not contain an IM4M (%s)\n", magic);
+				exit(1);
+			}
 
 			break;
 		default:
