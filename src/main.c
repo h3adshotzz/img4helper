@@ -34,6 +34,8 @@ static char *print_im4p = 0;
 static char *print_im4m = 0;
 static char *print_all = 0;
 
+static char *extract_test = 0;
+
 static int show_beta_notice = 0;
 
 static GOptionEntry entries[] =
@@ -42,6 +44,9 @@ static GOptionEntry entries[] =
 	{ "print-all", 'a', 0, G_OPTION_ARG_STRING, &print_all, "Print everything from the Image4 file", NULL },
 	{ "print-im4p", 'i', 0, G_OPTION_ARG_STRING, &print_im4p, "Print only the im4p", NULL },
 	{ "print-im4m", 'm', 0, G_OPTION_ARG_STRING, &print_im4m, "Print only the im4m", NULL },
+
+	/* Extracting a full .img4 file into seperate files */
+	{ "extract-test", 0, 0, G_OPTION_ARG_STRING, &extract_test, "", NULL },
 
 	/* Beta notice */
 	{ "beta-notes", 0, 0, G_OPTION_ARG_NONE, &show_beta_notice, "Show notes for the current beta version", NULL },
@@ -53,7 +58,7 @@ static GOptionEntry entries[] =
 void beta_notice ()
 {
 	g_print ("Please read the Github README for more information.\n");
-	g_print ("Latest version can be downloaded from https://s3.cloud-itouk.org/dnlds/releases/img4helper/img4helper-darwinx86-latest.zip")
+	g_print ("Latest version can be downloaded from https://s3.cloud-itouk.org/dnlds/releases/img4helper/img4helper-darwinx86-latest.zip");
 }
 
 
@@ -103,6 +108,12 @@ int main (int argc, char* argv[])
 		exit(1);
 	} else if (print_im4m) {
         print_img4(IMG4_PRINT_IM4M, print_im4m);
+		exit(1);
+	}
+
+	// Check for an extract
+	if (extract_test) {
+		img4_extract_test (extract_test);
 		exit(1);
 	}
 

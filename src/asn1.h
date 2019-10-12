@@ -111,7 +111,8 @@ typedef struct {
 /*				 ASN1 Parser    			   */
 /////////////////////////////////////////////////
 
-asn1ElemLen_t	asn1Len (const char buf[4]);
+asn1ElemLen_t	asn1Len (const char *buf);
+uint64_t 		asn1GetNumberFromTag(asn1Tag_t *tag);
 size_t			asn1GetPrivateTagnum (asn1Tag_t *tag, size_t *size_bytes);
 char		   *asn1GetString (char *buf, char **outstring, size_t *strlen);
 char		   *asn1ElementAtIndex (const char *buf, int index);

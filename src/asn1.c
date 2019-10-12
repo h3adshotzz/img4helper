@@ -37,7 +37,7 @@
  * 
  * 
  */
-asn1ElemLen_t asn1Len (const char buf[4])
+asn1ElemLen_t asn1Len (const char *buf)
 {
 	asn1Length_t *tmp = (asn1Length_t *)buf;
 	size_t outsize = 0;
@@ -60,6 +60,31 @@ asn1ElemLen_t asn1Len (const char buf[4])
 	ret.sizeBytes = bytes + 1;
 
 	return ret;
+}
+
+
+/**
+ * 
+ * 
+ */
+uint64_t asn1GetNumberFromTag(asn1Tag_t *tag)
+{
+    if (tag->tagNumber != kASN1TagINTEGER) {
+        g_print ("[Error] Not an integer\n");
+        exit(1);
+    }
+
+    uint64_t ret = 0;
+    asn1ElemLen_t len = asn1Len((char *) ++tag);
+    
+    unsigned char *data = (unsigned char *) tag + len.sizeBytes;
+    
+    while (len.dataLen--) {
+        ret *= 0x100;
+        ret+= *data++;
+    }
+    
+    return ret;
 }
 
 

@@ -21,7 +21,10 @@
 #define IMG4_H
 
 #include <glib.h>
+#include <lzfse.h>
+
 #include "asn1.h"
+#include "lzss.h"
 #include "config.h"
 
 typedef enum {
@@ -40,5 +43,7 @@ typedef enum {
 
 // Img4 printing
 void print_img4(Img4PrintType type, char* filename);
+
+void img4_extract_test (char *file);
 
 #endif

@@ -231,6 +231,110 @@ char* read_from_file (const char *path)
 	return ret;
 }
 
+void img4_extract_test (char *file)
+{
+	// Because we need the size of the payload and \0 fucks us over,
+	// we won't use the read_from_file function
+	FILE *f = fopen (file, "rb");
+	if (!f) {
+		g_print ("[Error] Could not read file: %s\n", file);
+		exit(1);
+	}
+
+	// Calc the size of the file
+	fseek (f, 0, SEEK_END);
+	size_t size = ftell (f);
+	fseek (f, 0, SEEK_SET);
+
+	// Buffer for the file and reading the bytes
+	char *buf = malloc(size);
+	if (buf) {
+		fread (buf, size, 1, f);
+	}
+
+	// Close the file
+	fclose (f);
+
+	// Check the files magic to see how to approach this
+	char *magic = getImageFileType ((char *) buf);
+	g_print ("magic: %s\n", magic);
+
+
+	char *im4p;
+	if (!strcmp (magic, "IMG4")) {
+		im4p = getIM4PFromIMG4 (buf);
+	} else if (!strcmp (magic, "IM4P")) {
+		im4p = buf;
+		free(buf);
+	} else {
+		g_print ("[Error] Provided file was not an IMG4 nor IM4P.");
+		exit(1);
+	}
+
+	int elm_count = asn1ElementsInObject (im4p);
+	g_print ("elms: %d\n", elm_count);
+
+	if (elm_count < 4) {
+		g_print ("not enough elems: %d", elm_count);
+		exit(1);
+	}
+
+	// By adding N to the string, it removes N bytes from the start. 
+	char *tag = asn1ElementAtIndex (im4p, 3) + 1;
+	asn1ElemLen_t len = asn1Len(tag);
+	char *data = tag + len.sizeBytes;
+
+	for (int i = 0; i < 5; i++) {
+		g_print ("%c ", data[i]);
+	}
+	g_print ("\n\n");
+
+	char *outdata;
+	if (!strncmp (data, "complzss", 8)) {
+		g_print ("Found LZSS Compression\n");
+		//outdata = tryLZSS(data, 0);		/* This library is fucked and doesn't work */
+	} else if (!strncmp(data, "bvx2", 4)) {
+		g_print ("Found bvx2\n");
+
+		char *compTag = data + len.sizeBytes;
+		char *fakeCompSizeTag = asn1ElementAtIndex (compTag, 0);
+		char *uncompSizeTag = asn1ElementAtIndex (compTag, 1);
+
+		size_t fake_src_size = asn1GetNumberFromTag ((asn1Tag_t *)fakeCompSizeTag);
+		size_t dst_size = asn1GetNumberFromTag ((asn1Tag_t *)uncompSizeTag);
+
+		size_t src_size = len.sizeBytes;
+
+		if (fake_src_size != 1) {
+			g_print ("[Error] fake_src_size not 1 but 0x%zx!\n", fake_src_size);
+		}
+
+		outdata = malloc (dst_size);
+
+#error "We need LZFSE, and I'm starting to get annoyed with meson so I'm going to try and switch to cmake first".
+		size_t uncomp_size = lzfse_decode_buffer ((uint8_t *) outdata, dst_size, (uint8_t *) data, src_size, NULL);
+
+		if (uncomp_size != dst_size) {
+			g_print ("[Error] Expected to decompress %zu bytes but only got %zu\n", dst_size, uncomp_size);
+			exit(1);
+		}
+
+		size = dst_size;
+
+		FILE *test = fopen ("test.raw", "wb");
+		fwrite (outdata, size, 1, test);
+		fclose (test);
+
+	} else {
+		g_print ("Shit, not bvx2 and lzss is broken\n");
+	}
+
+
+	/*FILE *test = fopen ("test.raw", "wb");
+	fwrite (data, size, 1, test);
+	fclose (test);*/
+}
+
 
 /**
  *	print_img4

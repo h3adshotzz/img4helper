@@ -2,13 +2,13 @@
 #
 #	Sources
 #
-sources = ['main.c', 'img4.c', 'asn1.c']
+sources = ['main.c', 'img4.c', 'asn1.c', 'lzss.c']
 
 
 #
 #	Dependencies
 #
-deps = [glib_dep]
+deps = [glib_dep, lzfse_dep]
 
 
 #
