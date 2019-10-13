@@ -70,6 +70,7 @@ void print_img4(Img4PrintType type, char* filename);
 
 img4_t *read_img (char *path);
 char *string_for_img4type (Img4Type type);
+char *img4_get_component_name (char *buf);
 char *img4_check_compression_type (char *buf);
 img4_t *img4_decompress_bvx2 (img4_t *file);
 

@@ -287,6 +287,23 @@ char *string_for_img4type (Img4Type type)
 	}
 }
 
+char *img4_get_component_name (char *buf)
+{
+	asn1Tag_t *t = (asn1Tag_t *) asn1ElementAtIndex(buf, 1);
+	char *comp = 0;
+	size_t len;
+	asn1GetString((char *)t, &comp, &len); 
+
+	/* Return a full string for the component name */
+	if (!strncmp(comp, "krnl", 4)) {
+		return "KernelCache";
+	} else if (!strncmp(comp, "ibot", 4)) {
+		return "iBoot";
+	} else {
+		return comp - (strlen(comp) + 4);
+	}
+}
+
 char *img4_check_compression_type (char *buf)
 {
 	/* Get an element count to ensure we are using an IM4P */
@@ -363,6 +380,12 @@ Image4: IM4P
 [*] Detecting compression type... bvx2
 [*] Decoding...
 [*] Done!
+
+
+		TODO: Fix component type detection
+		TODO: Fix LZSS decompression
+		TODO: Tidy up code
+
 	*/
 
 	// Check that a valid file was loaded. 
@@ -375,6 +398,15 @@ Image4: IM4P
 	// Print some file information
 	g_print ("Loaded: \t%s\n", im4p);
 	g_print ("Image4 Type: \t%s\n", string_for_img4type(file->type));
+
+	/*asn1Tag_t *t = (asn1Tag_t *) asn1ElementAtIndex(file->buf, 1);
+	char *comp = 0;
+	size_t len;
+	asn1GetString((char *)t, &comp, &len); 
+	g_print ("Component: \t%.*s\n\n", (int)len, comp);
+*/
+	char *a = img4_get_component_name (file->buf);
+	g_print ("Component: \t%s\n\n", a);
 
 	/* We can only decrypt full IMG4s or IM4Ps, so ignore if anything else */
 	if (file->type == IMG4_TYPE_IM4M || file->type == IMG4_TYPE_IM4R) {
@@ -421,6 +453,9 @@ Image4: IM4P
 		nimg->buf = file->buf;
 	}
 
+	/* Start banner */
+	g_print ("== Start\n");
+
 	/* Check for a form of compression, and whether the image was decrypted */
 	comp_type = img4_check_compression_type (nimg->buf);
 	g_print ("[*] Detecting compression type...");
@@ -431,13 +466,15 @@ Image4: IM4P
 	} else if (!strcmp (comp_type, "bvx2")) {
 
 		/* There is BVX2 compression */
-		g_print ("bvx2\n");
+		g_print (" bvx2\n");
 
 		/* Decode/Decompress the payload */
-		g_print ("[*] Decompressing...");
+		g_print ("[*] Decompressing...\n");
 		nimg = img4_decompress_bvx2 (nimg);
+		g_print ("[*] Done\n");
 
-		FILE *test = fopen ("outfile", "wb");
+		g_print ("[*] Writing to file: %s\n", outfile);
+		FILE *test = fopen (outfile, "wb");
 		fwrite (nimg->buf, nimg->size, 1, test);
 		fclose (test);
 
@@ -446,6 +483,12 @@ Image4: IM4P
 		/* There was no compression */
 		g_print ("None!\n");
 
+	}
+
+	if (!strcmp(a, "KernelCache")) {
+		g_print ("\nPlease run img4helper --analyse-kernel to analyse decompressed KernelCache.\n");
+	} else if (!strcmp(a, "iBoot")) {
+		g_print ("\nPlease run img4helper --analyse-iboot to analyse decompressed iBoot.\n");
 	}
 
 
