@@ -312,6 +312,43 @@ char *img4_check_compression_type (char *buf)
 	}
 }
 
+img4_t *img4_decompress_bvx2 (img4_t *file)
+{
+	img4_t *ret = file;
+
+	char *tag = asn1ElementAtIndex (file->buf, 3) + 1;
+	asn1ElemLen_t len = asn1Len (tag);
+	char *data = tag + len.sizeBytes;
+
+	char *compTag = data + len.dataLen;
+	char *fakeCompSizeTag = asn1ElementAtIndex (compTag, 0);
+	char *uncompSizeTag = asn1ElementAtIndex (compTag, 1);
+
+	size_t fake_src_size = asn1GetNumberFromTag ((asn1Tag_t *) fakeCompSizeTag);
+	size_t dst_size = asn1GetNumberFromTag ((asn1Tag_t *) uncompSizeTag);
+
+	size_t src_size = len.dataLen;
+
+	if (fake_src_size != 1) {
+		g_print ("[Error] fake_src_size not 1 but 0x%zx!\n", fake_src_size);
+	}
+
+	ret->buf = malloc (dst_size);
+
+	size_t uncomp_size = lzfse_decode_buffer ((uint8_t *) ret->buf, dst_size,
+											  (uint8_t *) data, src_size,
+											  NULL);
+
+	if (uncomp_size != dst_size) {
+		g_print ("[Error] Expected to decompress %zu bytes but only got %zu bytes\n", dst_size, uncomp_size);
+		exit(1);
+	}			
+
+	file->size = dst_size;
+	
+	return file;
+}
+
 /**
  * 
  * 
@@ -347,11 +384,17 @@ Image4: IM4P
 
 	/* Try to detect a compression type, if there is not luck, the file could be encrypted */
 	char *comp_type = img4_check_compression_type (file->buf);
-	g_print ("Compression: \t%s\n\n", comp_type);
+
+	/* Create a new img4_t as we are decrpyting/decompressing the buf */
+	img4_t *nimg = malloc (sizeof(img4_t));
+	nimg->type = file->type;
 
 	/* First check if its encrypted */
 	if (!strcmp (comp_type, "encrypted")) {
 
+		g_print ("Encryption: True\n");
+
+/*
 #error This doesn't quite work just yet, I just need to commit so i can use my laptop
 		char *iv = "0afa50a07d119e6ed70cb5d072a3d0d6";
 		char *key = "1a72479271ce1f8e9625c15c1e05e3e681d6408971a1ddc0d2b0c6a937a10d3e";
@@ -370,7 +413,39 @@ Image4: IM4P
 
 		FILE *test = fopen (outfile, "wb");
 		fwrite (enc_out, file->size, 1, test);
+		fclose (test);*/
+	} else {
+
+		/* Set the new image with the contents of the old */
+		nimg->size = file->size;
+		nimg->buf = file->buf;
+	}
+
+	/* Check for a form of compression, and whether the image was decrypted */
+	comp_type = img4_check_compression_type (nimg->buf);
+	g_print ("[*] Detecting compression type...");
+
+	if (!strcmp (comp_type, "complzss")) {
+
+
+	} else if (!strcmp (comp_type, "bvx2")) {
+
+		/* There is BVX2 compression */
+		g_print ("bvx2\n");
+
+		/* Decode/Decompress the payload */
+		g_print ("[*] Decompressing...");
+		nimg = img4_decompress_bvx2 (nimg);
+
+		FILE *test = fopen ("outfile", "wb");
+		fwrite (nimg->buf, nimg->size, 1, test);
 		fclose (test);
+
+	} else {
+
+		/* There was no compression */
+		g_print ("None!\n");
+
 	}
 
 
