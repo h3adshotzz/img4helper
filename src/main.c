@@ -34,7 +34,8 @@ static char *print_im4p = 0;
 static char *print_im4m = 0;
 static char *print_all = 0;
 
-static char *extract_test = 0;
+static char *extract_im4p = 0;
+static char *outfile = 0;
 
 static int show_beta_notice = 0;
 
@@ -46,7 +47,10 @@ static GOptionEntry entries[] =
 	{ "print-im4m", 'm', 0, G_OPTION_ARG_STRING, &print_im4m, "Print only the im4m", NULL },
 
 	/* Extracting a full .img4 file into seperate files */
-	{ "extract-test", 0, 0, G_OPTION_ARG_STRING, &extract_test, "", NULL },
+	{ "extract-im4p", 0, 0, G_OPTION_ARG_STRING, &extract_im4p, "", NULL }, 
+
+	/* Outfile */
+	{ "outfile", 'o', 0, G_OPTION_ARG_STRING, &outfile, "Output path for resulting file", NULL },
 
 	/* Beta notice */
 	{ "beta-notes", 0, 0, G_OPTION_ARG_NONE, &show_beta_notice, "Show notes for the current beta version", NULL },
@@ -112,9 +116,11 @@ int main (int argc, char* argv[])
 	}
 
 	// Check for an extract
-	if (extract_test) {
-		img4_extract_test (extract_test);
-		exit(1);
+	if (outfile) {
+		if (extract_im4p) {
+			img4_extract_im4p (extract_im4p, outfile);
+			exit(1);
+		}
 	}
 
 	// If nothing is set, or what is given is not recognised, print the help

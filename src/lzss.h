@@ -28,22 +28,8 @@
  *  Copyright (c) 2003 Apple Computer, Inc.
  *  DRI: Josh de Cesare
  */
-//
-//  lzssdec.h
-//  img4tool
-//
-//  Code borrowed from: http://newosxbook.com/src.jl?tree=listings&file=joker.c
-//  Coded by Jonathan Levin (a.k.a @Morpheus______), http://newosxbook.com
-
-#ifndef lzss_h
-#define lzss_h
-
 #include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
 
-char *tryLZSS(char *compressed, size_t *filesize);
-char *lzssDecompress(char *src, int size);
-
-#endif /* lzss_h */
+uint32_t lzadler32(uint8_t *buf, int32_t len);
+int decompress_lzss(uint8_t *dst, uint8_t *src, uint32_t srclen);
+uint8_t *compress_lzss(uint8_t *dst, uint32_t dstlen, uint8_t *src, uint32_t srcLen);

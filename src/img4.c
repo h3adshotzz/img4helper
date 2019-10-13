@@ -231,108 +231,149 @@ char* read_from_file (const char *path)
 	return ret;
 }
 
-void img4_extract_test (char *file)
+img4_t *read_img (char *path)
 {
-	// Because we need the size of the payload and \0 fucks us over,
-	// we won't use the read_from_file function
-	FILE *f = fopen (file, "rb");
-	if (!f) {
-		g_print ("[Error] Could not read file: %s\n", file);
-		exit(1);
-	}
+	/* Create an img4_t to hold the img data */
+	img4_t *ret = malloc (sizeof (img4_t));
 
-	// Calc the size of the file
+	/* Load the file and size into buf and size */
+	FILE *f = fopen (path, "rb");
+	if (!f) return NULL;
+	
 	fseek (f, 0, SEEK_END);
-	size_t size = ftell (f);
+	ret->size = ftell (f);
 	fseek (f, 0, SEEK_SET);
 
-	// Buffer for the file and reading the bytes
-	char *buf = malloc(size);
-	if (buf) {
-		fread (buf, size, 1, f);
-	}
+	ret->buf = malloc(ret->size);
+	if (ret->buf) fread (ret->buf, ret->size, 1, f);
 
-	// Close the file
 	fclose (f);
 
-	// Check the files magic to see how to approach this
-	char *magic = getImageFileType ((char *) buf);
-	g_print ("magic: %s\n", magic);
+	/* Load the file type */
+	char *magic = getImageFileType(ret->buf);
+	if (!magic) {
+		g_print ("[Error] Input file not recognised\n");
+		exit(1);
+	}
 
-
-	char *im4p;
-	if (!strcmp (magic, "IMG4")) {
-		im4p = getIM4PFromIMG4 (buf);
-	} else if (!strcmp (magic, "IM4P")) {
-		im4p = buf;
-		free(buf);
+	if (!strcmp(magic, "IMG4")) {
+		ret->type = IMG4_TYPE_IMG4;
+	} else if (!strcmp(magic, "IM4P")) {
+		ret->type = IMG4_TYPE_IM4P;
+	} else if (!strcmp(magic, "IM4M")) {
+		ret->type = IMG4_TYPE_IM4M;
+	} else if (!strcmp(magic, "IM4R")) {
+		ret->type = IMG4_TYPE_IM4R;
 	} else {
-		g_print ("[Error] Provided file was not an IMG4 nor IM4P.");
+		g_print ("[Error] Unrecognised image\n");
 		exit(1);
 	}
 
-	int elm_count = asn1ElementsInObject (im4p);
-	g_print ("elms: %d\n", elm_count);
+	return ret;
+}
 
-	if (elm_count < 4) {
-		g_print ("not enough elems: %d", elm_count);
+char *string_for_img4type (Img4Type type)
+{
+	if (type == IMG4_TYPE_IMG4) {
+		return "IMG4";
+	} else if (type == IMG4_TYPE_IM4P) {
+		return "IM4P";
+	} else if (type == IMG4_TYPE_IM4M) {
+		return "IM4M";
+	} else if (type == IMG4_TYPE_IM4R) {
+		return "IM4R";
+	} else {
+		return "Unknown";
+	}
+}
+
+char *img4_check_compression_type (char *buf)
+{
+	/* Get an element count to ensure we are using an IM4P */
+	int c = asn1ElementsInObject (buf);
+	if (c < 4) {
+		g_print ("[Error] Not enough elements in payload\n");
 		exit(1);
 	}
 
-	// By adding N to the string, it removes N bytes from the start. 
-	char *tag = asn1ElementAtIndex (im4p, 3) + 1;
-	asn1ElemLen_t len = asn1Len(tag);
+	/* Try to select the payload tag from the buf */
+	char *tag = asn1ElementAtIndex (buf, 3) + 1;
+	asn1ElemLen_t len = asn1Len (tag);
 	char *data = tag + len.sizeBytes;
 
-	for (int i = 0; i < 5; i++) {
-		g_print ("%c ", data[i]);
-	}
-	g_print ("\n\n");
-
-	char *outdata;
+	/* Check for either LZSS or LZFSE/BVX2 */
 	if (!strncmp (data, "complzss", 8)) {
-		g_print ("Found LZSS Compression\n");
-		//outdata = tryLZSS(data, 0);		/* This library is fucked and doesn't work */
-	} else if (!strncmp(data, "bvx2", 4)) {
-		g_print ("Found bvx2\n");
-
-		char *compTag = data + len.sizeBytes;
-		char *fakeCompSizeTag = asn1ElementAtIndex (compTag, 0);
-		char *uncompSizeTag = asn1ElementAtIndex (compTag, 1);
-
-		size_t fake_src_size = asn1GetNumberFromTag ((asn1Tag_t *)fakeCompSizeTag);
-		size_t dst_size = asn1GetNumberFromTag ((asn1Tag_t *)uncompSizeTag);
-
-		size_t src_size = len.sizeBytes;
-
-		if (fake_src_size != 1) {
-			g_print ("[Error] fake_src_size not 1 but 0x%zx!\n", fake_src_size);
-		}
-
-		outdata = malloc (dst_size);
-
-#error "We need LZFSE, and I'm starting to get annoyed with meson so I'm going to try and switch to cmake first".
-		size_t uncomp_size = lzfse_decode_buffer ((uint8_t *) outdata, dst_size, (uint8_t *) data, src_size, NULL);
-
-		if (uncomp_size != dst_size) {
-			g_print ("[Error] Expected to decompress %zu bytes but only got %zu\n", dst_size, uncomp_size);
-			exit(1);
-		}
-
-		size = dst_size;
-
-		FILE *test = fopen ("test.raw", "wb");
-		fwrite (outdata, size, 1, test);
-		fclose (test);
-
+		return "complzss";
+	} else if (!strncmp (data, "bvx2", 4)) {
+		return "bvx2";
 	} else {
-		g_print ("Shit, not bvx2 and lzss is broken\n");
+		/* Either the image is encrypted, or corrupt. Be optimistic and guess encrypted */
+		return "encrypted";
+	}
+}
+
+/**
+ * 
+ * 
+ */
+void img4_extract_im4p (char *im4p, char *outfile)
+{
+
+	/*
+Loaded: kernelcache.release.iphone11
+Image4: IM4P
+
+[*] Detecting compression type... bvx2
+[*] Decoding...
+[*] Done!
+	*/
+
+	// Check that a valid file was loaded. 
+	img4_t *file = read_img (im4p);
+	if (!file->size || !file->buf) {
+		g_print ("[Error] There was an issue loading the file\n");
+		exit(1);
+	}
+
+	// Print some file information
+	g_print ("Loaded: \t%s\n", im4p);
+	g_print ("Image4 Type: \t%s\n", string_for_img4type(file->type));
+
+	/* We can only decrypt full IMG4s or IM4Ps, so ignore if anything else */
+	if (file->type == IMG4_TYPE_IM4M || file->type == IMG4_TYPE_IM4R) {
+		g_print ("[Error] Only .img4 and .im4p file payloads can be extracted\n");
+		exit (1);
+	}
+
+	/* Try to detect a compression type, if there is not luck, the file could be encrypted */
+	char *comp_type = img4_check_compression_type (file->buf);
+	g_print ("Compression: \t%s\n\n", comp_type);
+
+	/* First check if its encrypted */
+	if (!strcmp (comp_type, "encrypted")) {
+
+#error This doesn't quite work just yet, I just need to commit so i can use my laptop
+		char *iv = "0afa50a07d119e6ed70cb5d072a3d0d6";
+		char *key = "1a72479271ce1f8e9625c15c1e05e3e681d6408971a1ddc0d2b0c6a937a10d3e";
+		uint8_t fullkey[] = "0afa50a07d119e6ed70cb5d072a3d0d61a72479271ce1f8e9625c15c1e05e3e681d6408971a1ddc0d2b0c6a937a10d3e";
+
+		unsigned char *enc_out = malloc (file->size);
+
+		AES_KEY aes_key;
+		AES_set_decrypt_key (fullkey, 256, &aes_key);
+		AES_decrypt ((unsigned char *)file->buf, enc_out, &aes_key);
+
+		g_print ("Size: %lu\n", strlen((char *) enc_out));
+		for (int i = 0; i < 10; i++) {
+			g_print ("%02x ", enc_out[i]);
+		}
+
+		FILE *test = fopen (outfile, "wb");
+		fwrite (enc_out, file->size, 1, test);
+		fclose (test);
 	}
 
 
-	/*FILE *test = fopen ("test.raw", "wb");
-	fwrite (data, size, 1, test);
-	fclose (test);*/
 }
 
 

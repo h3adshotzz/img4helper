@@ -21,6 +21,7 @@
 #define IMG4_H
 
 #include <glib.h>
+#include <openssl/aes.h>
 #include <lzfse.h>
 
 #include "asn1.h"
@@ -41,9 +42,37 @@ typedef enum {
 	IMG4_TYPE_IM4R
 } Img4Type;
 
+typedef struct imgfile_t {
+	char *buf;
+	size_t size;
+} imgfile_t;
+
+
+/**
+ * 	This is not a struct for the file structure, its to hold some
+ * 	info, the size and a loaded buffer of the img4/im4p/im4m/im4r
+ * 	file.
+ */
+typedef struct img4_t {
+
+	/* File buffer and size */
+	char *buf;
+	size_t size;
+
+	/* Image4 variant */
+	Img4Type type;
+
+} img4_t;
+
+
 // Img4 printing
 void print_img4(Img4PrintType type, char* filename);
 
+img4_t *read_img (char *path);
+char *string_for_img4type (Img4Type type);
+char *img4_check_compression_type (char *buf);
+
+void img4_extract_im4p (char *im4p, char* outfile);
 void img4_extract_test (char *file);
 
 #endif

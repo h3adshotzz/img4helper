@@ -35,7 +35,8 @@ configure_file(
 #	Dependencies
 #
 glib_dep = dependency('glib-2.0')
-lzfse_dep = dependency('liblzfse.dylib')
+lzfse_dep = dependency('lzfse')
+openssl_dep = dependency('openssl')
 
 
 #

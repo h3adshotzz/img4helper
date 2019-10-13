@@ -1,6 +1,22 @@
 {
     "files.associations": {
         "sstream": "c",
-        "*.old": "c"
+        "*.old": "c",
+        "__hash_table": "c",
+        "__split_buffer": "c",
+        "__tree": "c",
+        "array": "c",
+        "bitset": "c",
+        "deque": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "iterator": "c",
+        "queue": "c",
+        "random": "c",
+        "set": "c",
+        "string": "c",
+        "unordered_map": "c",
+        "utility": "c",
+        "vector": "c"
     }
 }
