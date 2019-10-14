@@ -79,11 +79,16 @@ void handle_im4p (char *buf, int tabs)
 
 	// Check for KBAG values. There should be two on encrypted images, with the first being PRODUCT
 	//      and the seccond being DEVELOPMENT.
-	if (--elems > 0) {
-		img4PrintKeybag ((char *) asn1ElementAtIndex(buf, 4), padding);
-	} else {
+	//
+	//	THIS DOES NOT WORK AND NEEDS TO BE FIXED
+	// 	REWRITE WHOLE FUNCTION
+	//
+	if (elems < 1) {
 		g_print ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
+		exit(1);
 	}
+
+	img4PrintKeybag ((char *) asn1ElementAtIndex(buf, 4), padding);
 
 }
 
@@ -399,12 +404,7 @@ Image4: IM4P
 	g_print ("Loaded: \t%s\n", im4p);
 	g_print ("Image4 Type: \t%s\n", string_for_img4type(file->type));
 
-	/*asn1Tag_t *t = (asn1Tag_t *) asn1ElementAtIndex(file->buf, 1);
-	char *comp = 0;
-	size_t len;
-	asn1GetString((char *)t, &comp, &len); 
-	g_print ("Component: \t%.*s\n\n", (int)len, comp);
-*/
+
 	char *a = img4_get_component_name (file->buf);
 	g_print ("Component: \t%s\n\n", a);
 
@@ -427,6 +427,9 @@ Image4: IM4P
 		g_print ("Encryption: True\n");
 
 /*
+
+Ref: https://github.com/tihmstar/img4tool/blob/master/img4tool/img4tool.cpp#L500
+
 #error This doesn't quite work just yet, I just need to commit so i can use my laptop
 		char *iv = "0afa50a07d119e6ed70cb5d072a3d0d6";
 		char *key = "1a72479271ce1f8e9625c15c1e05e3e681d6408971a1ddc0d2b0c6a937a10d3e";
