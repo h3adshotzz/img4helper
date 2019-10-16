@@ -17,6 +17,8 @@
  *
 */
 
+// Testing git config on new computer
+
 #ifndef IMG4_H
 #define IMG4_H
 
