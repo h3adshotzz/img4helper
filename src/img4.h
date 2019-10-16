@@ -21,12 +21,30 @@
 #define IMG4_H
 
 #include <glib.h>
-#include <openssl/aes.h>
+// Add in meson to check if we can use CommonCrypto instead.
+//#include <openssl/aes.h>
 #include <lzfse.h>
 
 #include "asn1.h"
 #include "lzss.h"
 #include "config.h"
+
+/* Image types */
+// TODO: Add all of them
+#define IMAGE_TYPE_DIAG         'diag' // diagnostics
+#define IMAGE_TYPE_IBOOT_LLB    'illb' // iboot (darwin) first-stage loader
+#define IMAGE_TYPE_IBOOT        'ibot' // iboot (darwin) loader
+#define IMAGE_TYPE_KERNEL		'krnl' // kernel cache
+#define IMAGE_TYPE_DEVTREE      'dtre' // darwin device tree
+#define IMAGE_TYPE_LOGO         'logo' // boot logo image
+#define IMAGE_TYPE_RECMODE      'recm' // recovery mode image
+#define IMAGE_TYPE_NEEDSERVICE  'nsrv' // recovery mode image
+#define IMAGE_TYPE_BATTERYLOW0  'batl' // battery low image - empty
+#define IMAGE_TYPE_BATTERYLOW1  'batL' // battery low image - red
+#define IMAGE_TYPE_BATTERYCHRG  'batC' // battery charge image
+#define IMAGE_TYPE_ENV          'ienv' // environment vars
+#define IMAGE_TYPE_TSYS         'tsys' // tsys tester
+#define IMAGE_TYPE_CHIME        'beep' // boot chime
 
 typedef enum {
 	IMG4_PRINT_ALL,

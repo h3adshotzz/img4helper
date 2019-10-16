@@ -582,9 +582,16 @@ void printStringWithKey (char* key, asn1Tag_t *string, char *padding)
  */
 void img4PrintKeybag (char *octet, char *padding)
 {
+	// Ensure the OCTET has a value
+	if (octet == NULL) {
+		g_print ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
+		exit(1);
+	}
+	
 	// Check if the octet is a kASN1TagOCTET
 	if (((asn1Tag_t *) octet)->tagNumber != kASN1TagOCTET) {
-		g_print ("%s[Error] not an OCTET\n", padding);
+		//g_print ("%s[Error] not an OCTET\n", padding);
+		g_print ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
 		exit(1);
 	}
 

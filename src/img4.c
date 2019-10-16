@@ -300,10 +300,14 @@ char *img4_get_component_name (char *buf)
 	asn1GetString((char *)t, &comp, &len); 
 
 	/* Return a full string for the component name */
-	if (!strncmp(comp, "krnl", 4)) {
+	if (!strncmp (comp, IMAGE_TYPE_KERNEL, 4)) {
 		return "KernelCache";
-	} else if (!strncmp(comp, "ibot", 4)) {
+	} else if (!strncmp (comp, IMAGE_TYPE_IBOOT, 4)) {
 		return "iBoot";
+	} else if (!strncmp (comp, IMAGE_TYPE_IBOOT_LLB, 4)) {
+		return "LLB";
+	} else if (!strncmp (comp, IMAGE_TYPE_DEVTREE, 4)) {
+		return "DeviceTree";
 	} else {
 		return comp - (strlen(comp) + 4);
 	}
@@ -434,6 +438,7 @@ Ref: https://github.com/tihmstar/img4tool/blob/master/img4tool/img4tool.cpp#L500
 		char *iv = "0afa50a07d119e6ed70cb5d072a3d0d6";
 		char *key = "1a72479271ce1f8e9625c15c1e05e3e681d6408971a1ddc0d2b0c6a937a10d3e";
 		uint8_t fullkey[] = "0afa50a07d119e6ed70cb5d072a3d0d61a72479271ce1f8e9625c15c1e05e3e681d6408971a1ddc0d2b0c6a937a10d3e";
+    AES_cbc_encrypt((const unsigned char*)decPayload.payload(), (unsigned char*)decPayload.payload(), decPayload.payloadSize(), &decKey, iv, AES_DECRYPT);
 
 		unsigned char *enc_out = malloc (file->size);
 
@@ -449,6 +454,7 @@ Ref: https://github.com/tihmstar/img4tool/blob/master/img4tool/img4tool.cpp#L500
 		FILE *test = fopen (outfile, "wb");
 		fwrite (enc_out, file->size, 1, test);
 		fclose (test);*/
+
 	} else {
 
 		/* Set the new image with the contents of the old */
