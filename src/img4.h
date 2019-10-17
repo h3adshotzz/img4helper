@@ -17,84 +17,109 @@
  *
 */
 
-// Testing git config on new computer
-
 #ifndef IMG4_H
 #define IMG4_H
 
+/* Headers */
 #include <glib.h>
-// Add in meson to check if we can use CommonCrypto instead.
-//#include <openssl/aes.h>
 #include <lzfse.h>
-
 #include "asn1.h"
 #include "lzss.h"
 #include "config.h"
 
-/* Image types */
-// TODO: Add all of them
-#define IMAGE_TYPE_DIAG         'diag' // diagnostics
-#define IMAGE_TYPE_IBOOT_LLB    'illb' // iboot (darwin) first-stage loader
-#define IMAGE_TYPE_IBOOT        'ibot' // iboot (darwin) loader
-#define IMAGE_TYPE_KERNEL		'krnl' // kernel cache
-#define IMAGE_TYPE_DEVTREE      'dtre' // darwin device tree
-#define IMAGE_TYPE_LOGO         'logo' // boot logo image
-#define IMAGE_TYPE_RECMODE      'recm' // recovery mode image
-#define IMAGE_TYPE_NEEDSERVICE  'nsrv' // recovery mode image
-#define IMAGE_TYPE_BATTERYLOW0  'batl' // battery low image - empty
-#define IMAGE_TYPE_BATTERYLOW1  'batL' // battery low image - red
-#define IMAGE_TYPE_BATTERYCHRG  'batC' // battery charge image
-#define IMAGE_TYPE_ENV          'ienv' // environment vars
-#define IMAGE_TYPE_TSYS         'tsys' // tsys tester
-#define IMAGE_TYPE_CHIME        'beep' // boot chime
+/* These are different types of Image4 */
+#define IMAGE_TYPE_DIAG					"diag"	// diagnostics
+#define IMAGE_TYPE_LLB					"illb"	// iboot first-stage loader
+#define IMAGE_TYPE_IBOOT				"ibot"	// iboot second-stage loader
+#define IMAGE_TYPE_IBSS					"ibss"	// iboot single stage
+#define IMAGE_TYPE_IBEC					"ibec"	// iboot epoch change
+#define IMAGE_TYPE_DEVTREE				"dtre"	// darwin device tree
+#define IMAGE_TYPE_RAMDISK				"rdsk"	// darwin ram disk for restore
+#define IMAGE_TYPE_KERNELCACHE			"krnl"	// darwin kernel cache
+#define IMAGE_TYPE_LOGO					"logo"	// boot logo image
+#define IMAGE_TYPE_RECMODE				"recm"	// recovery mode image
+#define IMAGE_TYPE_NEEDSERVICE			"nsrv"	// need service image
+#define IMAGE_TYPE_GLYPHCHRG			"glyC"	// glyph charge image
+#define IMAGE_TYPE_GLYPHPLUGIN			"glyP"	// glyph plug in image
+#define IMAGE_TYPE_BATTERYCHARGING0		"chg0"  // battery charging image - bright
+#define IMAGE_TYPE_BATTERYCHARGING1		"chg1"  // battery charging image - dim
+#define IMAGE_TYPE_BATTERYLOW0			"bat0"	// battery low image - empty
+#define IMAGE_TYPE_BATTERYLOW1			"bat1"	// battery low image - red (composed onto empty)
+#define IMAGE_TYPE_BATTERYFULL			"batF"	// battery full image list
+#define IMAGE_TYPE_OS_RESTORE			"rosi"	// OS image for restore
+#define IMAGE_TYPE_SEP_OS				"sepi"	// SEP OS image
+#define IMAGE_TYPE_SEP_OS_RESTORE		"rsep"	// SEP OS image for restore
+#define IMAGE_TYPE_HAMMER				"hmmr"	// PE's Hammer test
 
+
+/* Image type */
 typedef enum {
-	IMG4_PRINT_ALL,
-	IMG4_PRINT_IM4P,
-	IMG4_PRINT_IM4M
-} Img4PrintType;
-
-
-typedef enum {
+	IMG4_TYPE_ALL,
 	IMG4_TYPE_IMG4,
-	IMG4_TYPE_IM4M,
 	IMG4_TYPE_IM4P,
+	IMG4_TYPE_IM4M,
 	IMG4_TYPE_IM4R
-} Img4Type;
-
-typedef struct imgfile_t {
-	char *buf;
-	size_t size;
-} imgfile_t;
-
+} Image4Type;
 
 /**
  * 	This is not a struct for the file structure, its to hold some
  * 	info, the size and a loaded buffer of the img4/im4p/im4m/im4r
  * 	file.
  */
-typedef struct img4_t {
+typedef struct image4_t {
 
 	/* File buffer and size */
 	char *buf;
 	size_t size;
 
-	/* Image4 variant */
-	Img4Type type;
+	/* Image4 variant and component (krnl, ibot, etc...) */
+	Image4Type type;
+	char *component;
 
-} img4_t;
+} image4_t;
 
 
-// Img4 printing
-void print_img4(Img4PrintType type, char* filename);
+/**
+ * 	Functions for handling and manipulating image4_t's
+ * 
+ */
+image4_t 	*img4_read_image_from_path (char *path);
+char 		*img4_string_for_image_type (Image4Type print_type);
+char 		*img4_get_component_name (char *buf);
 
-img4_t *read_img (char *path);
-char *string_for_img4type (Img4Type type);
-char *img4_get_component_name (char *buf);
-char *img4_check_compression_type (char *buf);
-img4_t *img4_decompress_bvx2 (img4_t *file);
 
-void img4_extract_im4p (char *im4p, char* outfile);
-void img4_extract_test (char *file);
+/**
+ * 	Functions for handling specific types of Image4 files.
+ * 
+ * 	Note: Full .img4 files should call handle_img4(), which will then
+ * 	split the file and call the respective handle_x functions for the
+ * 	part of the file being worked on.
+ * 
+ * 	All functions take the same arguments. The buf is the loaded
+ * 	image file, and the tabs are how many indentations to print the
+ * 	data in.
+ * 
+ * 	The handle() function will take an image_t and use the correct
+ * 	function.
+ * 
+ */
+void img4_handle (image4_t *image);
 
-#endif
+void img4_handle_img4 (char *buf, int tabs);
+void img4_handle_im4p (char *buf, int tabs);
+void img4_handle_im4m (char *buf, int tabs);
+void img4_handle_im4r (char *buf, int tabs);
+
+
+/**
+ * 	Functions for printing Image4's.
+ *
+ * 	One passes the Image4 type and the filename to load to this function,
+ * 	the filename is that loaded and an image4_t is constructed and passed
+ * 	to img4_handle.
+ * 
+ */
+void img4_print_with_type (Image4Type type, char *filename);
+
+
+#endif /* IMG4_H */

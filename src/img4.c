@@ -18,48 +18,216 @@
 */
 
 #include "img4.h"
-#include "asn1.h"
-#include <stdio.h>
-
-
 
 //////////////////////////////////////////////////////////////////
-/*				   IM4P/IM4M Specific Funs						*/
+/*				   IM4P/IM4M Specific Funcs						*/
 //////////////////////////////////////////////////////////////////
 
 
 /**
- *	handle_im4p()
- *
- *	Handle a given file's im4p section. This will simply print the data contained
- *  within the IM4P header.
- *
+ * 	img4_read_image_from_path ()
+ * 
+ * 	The Image4 situated at path will be read in and used to construct an
+ * 	image4_t type, which contains a few properties about an Image4 file
+ * 	that is useful for other functions and operations.
+ * 
+ * 	Args:
+ * 		char *path			-	The path to the Image4 that should be loaded
+ * 	
+ * 	Returns:
+ * 		image4_t			-	The constructed image4_t type.
+ * 
  */
-void handle_im4p (char *buf, int tabs)
+image4_t *img4_read_image_from_path (char *path)
 {
+	/* Create our image4_t to populate and return */
+	image4_t *image = malloc (sizeof (image4_t));
+
+	/* The path should have already been verified by the caller */
+	FILE *f = fopen (path, "rb");
+	if (!f) {
+		g_print ("[Error] Could not read file!\n");
+		exit(0);
+	}
+
+	/* Check the files size in bytes */
+	fseek (f, 0, SEEK_END);
+	image->size = ftell (f);
+	fseek (f, 0, SEEK_SET);
+
+	/* Start reading bytes into the buffer */
+	image->buf = malloc (image->size);
+	if (image->buf) fread (image->buf, image->size, 1, f);
+	
+	/* Close the file */
+	fclose (f);
+
+	/* Calculate the image file type */
+	char *magic = getImageFileType (image->buf);
+	if (!magic) {
+		g_print ("[Error] Input file could not be recognised as an Image4\n");
+		exit (0);
+	}
+
+	/* Go through and check each of the magics */
+	if (!strncmp (magic, "IMG4", 4)) {
+		image->type = IMG4_TYPE_IMG4;
+	} else if (!strncmp (magic, "IM4P", 4)) {
+		image->type = IMG4_TYPE_IM4P;
+	} else if (!strncmp (magic, "IM4M", 4)) {
+		image->type = IMG4_TYPE_IM4M;
+	} else if (!strncmp (magic, "IM4R", 4)) {
+		image->type = IMG4_TYPE_IM4R;
+	} else {
+		g_print ("[Error] Input file could not be recognised as an Image4\n");
+		exit (0);
+	}
+
+	/* Return the newly created image */
+	return image;
+
+}
+
+
+/**
+ * 	img4_string_for_image_type ()
+ * 
+ * 	Takes an Image4Type enum and translates into a string, as enums are
+ * 	stored as integers.
+ * 
+ * 	Args:
+ * 		Image4Type type 	-	The type to translate
+ * 
+ * 	Returns:
+ * 		char *				-	The string translation of the type.
+ * 
+ */
+char *img4_string_for_image_type (Image4Type type)
+{
+	if (type == IMG4_TYPE_IMG4) {
+		return "IMG4";
+	} else if (type == IMG4_TYPE_IM4P) {
+		return "IM4P";
+	} else if (type == IMG4_TYPE_IM4M) {
+		return "IM4M";
+	} else if (type == IMG4_TYPE_IM4R) {
+		return "IM4R";
+	} else {
+		return "Unknown";
+	}
+}
+
+
+/**
+ * 	TODO: THIS NEEDS TO BE FINISHED!
+ * 
+ * 	img4_get_component_name ()
+ * 
+ * 	Takes an image buffer and determines which firmware file is has been taken
+ * 	from. For example: 'krnl' == 'KernelCache', 'ibot' == 'iBoot'.
+ * 
+ * 	Args:
+ * 		char *		-	The payload bytes
+ * 
+ * 	Returns:
+ * 		char *		-	The component type string.
+ * 
+ */
+char *img4_get_component_name (char *buf)
+{
+	char *magic;
+	size_t l;
+	getSequenceName(buf, &magic, &l);
+
+	char *raw = asn1ElementAtIndex(buf, 1) + 2;
+
+	if (!strncmp (raw, "ibot", 4)) {
+		return "iBoot";
+	} else if (!strncmp (raw, IMAGE_TYPE_IBEC, 4)) {
+		return "iBoot Epoch Change (iBEC)";
+	} else if (!strncmp (raw, IMAGE_TYPE_IBSS, 4)) {
+		return "iBoot Single Stage (iBSS)";
+	} else if (!strncmp (raw, IMAGE_TYPE_LLB, 4)) {
+		return "Low Level Bootloader (LLB)";
+	} else if (!strncmp (raw, IMAGE_TYPE_SEP_OS, 4)) {
+		return "Secure Enclave OS (SEP OS)";
+	} else if (!strncmp (raw, IMAGE_TYPE_SEP_OS_RESTORE, 4)) {
+		return "Secure Enclave OS Restore (SEP OS RESTORE)";
+	} else if (!strncmp (raw, IMAGE_TYPE_DEVTREE, 4)) {
+		return "Device Tree";
+	} else if (!strncmp (raw, IMAGE_TYPE_RAMDISK, 4)) {
+		return "Update/Restore Ramdisk";
+	} else if (!strncmp (raw, IMAGE_TYPE_KERNELCACHE, 4)) {
+		return "Darwin Kernel Cache";
+	} else if (!strncmp (raw, IMAGE_TYPE_LOGO, 4)) {
+		return "Boot Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_RECMODE, 4)) {
+		return "Recovery Mode Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_NEEDSERVICE, 4)) {
+		return "Need Service Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_GLYPHCHRG, 4)) {
+		return "Glyph Charge Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_GLYPHPLUGIN, 4)) {
+		return "Glyph Plugin Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_BATTERYCHARGING0, 4)) {
+		return "Battery Charging 0 Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_BATTERYCHARGING1, 4)) {
+		return "Battery Charging 1 Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_BATTERYLOW0, 4)) {
+		return "Battery Charging Low 0 Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_BATTERYLOW1, 4)) {
+		return "Battery Charging Low 1 Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_BATTERYFULL, 4)) {
+		return "Battery Full Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_OS_RESTORE, 4)) {
+		return "iOS Restore Image";
+	} else if (!strncmp (raw, IMAGE_TYPE_HAMMER, 4)) {
+		return "Hammer";
+	} else {
+		return "Unknown Component";
+	}
+}
+
+
+/**
+ * 	img4_handle_im4p ()
+ * 
+ * 	Takes the byte stream of an .im4p, or the im4p section of an .img4, and
+ * 	a tab count. The im4p is parsed and each element is printed in a formatted
+ * 	way according to the tab count. If there are any errors, the program should
+ * 	gracefully exit as there are multiple error checks
+ * 
+ * 	Args:
+ * 		char *buf 		-	The im4p buffer
+ * 		int tabs 		-	Amount of whitespace to print before the elements
+ * 
+ */
+void img4_handle_im4p (char *buf, int tabs)
+{
+	/* Generate a padding string for tabs */
 	char *padding = malloc(sizeof(char) * tabs);
 	for (int i = 0; i < tabs; i++) {
 		padding[i] = '\t';
 	}
 
-	// Print IM4P
+	/* Print the IM4P banner */
 	g_print ("  IM4P: ------\n");
 
-	// Get buf magic
+	/* We can't really use image4_t here, so we have to calculate everything */
 	char *magic;
 	size_t l;
 	getSequenceName(buf, &magic, &l);
 
-	// Check if the magic matches IM4P
+	/* Verify that we have been given an im4p buffer */
 	if (strncmp("IM4P", magic, l)) {
 		g_print ("%s[Error] Expected \"IM4P\", got \"%s\"\n", padding, magic);
 	}
 
-	// Grab all the elements in the file magic.
 	// TODO: counting more elemnts than it should. Images without kbags are still being parsed
+	/* Grab the amount of ASN1 elements in the buffer */
 	int elems = asn1ElementsInObject(buf);
 
-	// Print the Image type, desc and size
+	/* Print the Image type, desc and size */
 	if (--elems > 0) {
 		printStringWithKey("Type", (asn1Tag_t *) asn1ElementAtIndex(buf, 1), padding);
 	}
@@ -68,7 +236,7 @@ void handle_im4p (char *buf, int tabs)
 	}
 	if (--elems > 0) {
 
-		// Check the data size and print it.
+		/* Check the data size and print it. */
 		asn1Tag_t *data = (asn1Tag_t *) asn1ElementAtIndex(buf, 3);
 		if (data->tagNumber != kASN1TagOCTET) {
 			g_print ("%s[Warning] Skipped an unexpected tag where an OCTETSTRING was expected\n", padding);
@@ -87,23 +255,24 @@ void handle_im4p (char *buf, int tabs)
 		g_print ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
 		exit(1);
 	}
-
 	img4PrintKeybag ((char *) asn1ElementAtIndex(buf, 4), padding);
 
 }
 
 
 /**
- *
- *	handle_im4m()
- *
- *	Handle a given file's im4m section. This will simply print the data contained
- *	within the IM4M.
- *
+ * 	img4_handle_im4m ()
+ * 
+ * 	Similar to img4_handle_im4p (), takes the .im4m or im4m section buffer and
+ * 	a tab count, then prints formatted information contained within the manifest.
+ * 
+ * 	Args:
+ * 		char *buf 		-	The im4m buffer
+ * 		int tags		-	 Amount of whitespace to print before the elements
+ * 
  */
-void handle_im4m(char *buf, int tabs)
+void img4_handle_im4m (char *buf, int tabs)
 {
-
 	char *padding = malloc(sizeof(char) * tabs);
 	for (int i = 0; i < tabs; i++) {
 		padding[i] = '\t';
@@ -159,458 +328,173 @@ void handle_im4m(char *buf, int tabs)
 
 		img4PrintManifestBody(manbseq, padding);
 	}
-
 }
 
 
 /**
- *
- *
- *
- *
+ * 	img4_handle_im4r ()
+ * 
+ * 	Similar to img4_handle_im4p (), takes the .im4r or im4r section buffer and
+ * 	a tab count, then prints formatted information contained within the im4r.
+ * 
+ * 	Args:
+ * 		char *buf 		-	The im4r buffer
+ * 		int tags		-	Amount of whitespace to print before the elements
+ * 
  */
-void handle_img4 (char *buf)
+void img4_handle_im4r (char *buf, int tabs)
 {
-	// Format the output correctly
-	g_print ("IMG4: ------\n");
+	/* Calculate padding */
+	char *padding = malloc (sizeof (char) * tabs);
+	for (int i = 0; i < tabs; i++) {
+		padding[i] = '\t';
+	}
 
-	// Handle the IM4P first, tabbing set to 1.
-	handle_im4p (getIM4PFromIMG4 (buf), 1);
+	/* Print IM4R banner */
+	g_print ("%sIM4R: ------\n", padding);
 
-	// Make some space between the IM4M and IM4P
+	/* Verify the buf magic */
+	char *magic;
+	size_t l;
+	getSequenceName (buf, &magic, &l);
+
+	/* Check the magic matches IM4R */
+	if (strncmp (magic, "IM4R", 4)) {
+		g_print ("%sFile does not contain an IM4R\n", padding);
+		exit (0);
+	}
+
+	/* Verify the amount of elements in the IM4R */
+	int elems = asn1ElementsInObject (buf);
+	if (elems < 2) {
+		g_print ("%s[Error] Expecting at least 2 elements\n", padding);
+		exit (0);
+	}
+
+	/* The BNCN is contained within an ASN1 SET */
+	asn1Tag_t *set = (asn1Tag_t *) asn1ElementAtIndex (buf, 1);
+	if (set->tagNumber != kASN1TagSET) {
+		g_print ("%s[Error] Expecting SET\n", padding);
+		exit (0);
+	}
+
+	/* Remove a few bytes from the start of the SET so we get to the next elem */
+	set += asn1Len ((char *) set + 1).sizeBytes + 1;
+	
+	/* Check if the tag is private */
+	if (set->tagClass != kASN1TagClassPrivate) {
+		g_print ("%s[Error] Expecting Tag of private type\n", padding);
+		exit (0);
+	}
+	
+	/* Print the private tag, which should be "BNCN" */
+	asn1PrintPrivtag (asn1GetPrivateTagnum (set++, 0), padding);
 	g_print ("\n");
 
-	// Handle the IM4M
-	handle_im4m (getIM4MFromIMG4 (buf), 1);
-}
+	/* Advance to the next value */
+	set += asn1Len ((char *) set).sizeBytes + 1;
+	elems += asn1ElementsInObject ((char *) set);
 
-
-void handle_all (char *buf)
-{
-	char *magic = getImageFileType(buf);
-	if (!magic) {
-		g_print ("[Error] Input file not recognised\n");
-		exit(1);
+	/* Check that there is still two values left in the set */
+	if (elems < 2) {
+		g_print ("%s[Error] Expecting at least 2 values\n", padding);
+		exit (0);
 	}
 
-	g_print ("Image type: %s\n\n", magic);
+	/* Print the tag key */
+	asn1PrintIA5String ((asn1Tag_t *) asn1ElementAtIndex ((char *) set, 0), padding);
+	g_print (": ");
 
-	if (!strcmp(magic, "IMG4")) {
-		handle_img4 (buf);
-	} else if (!strcmp(magic, "IM4P")) {
-		handle_im4p (buf, 1);
-	} else if (!strcmp(magic, "IM4M")) {
-		handle_im4m (buf, 1);
-	} else if (!strcmp(magic, "IM4R")) {
-		//
-	} else {
-		g_print ("[Error] Unrecognised image\n");
-		exit(1);
-	}
+	/* Print it's value */
+	asn1PrintOctet ((asn1Tag_t *) asn1ElementAtIndex ((char *) set, 1), padding);
+	g_print ("\n");
 
 }
 
 
 //////////////////////////////////////////////////////////////////
-/*					General IMG4 Funcs							*/
+/*				    Image Printing Funcs						*/
 //////////////////////////////////////////////////////////////////
 
 
 /**
- *	read_from_file()
- *
- *	Reads the given input file and returns an array buffer.
- *
- */
-char* read_from_file (const char *path)
-{
-	FILE *f = fopen(path, "rb");
-	if (!f) return NULL;
-	fseek(f, 0, SEEK_END);
-	size_t size = ftell(f);
-	fseek(f, 0, SEEK_SET);
-	char *ret = malloc(size);
-	if (ret) fread(ret, size, 1, f);
-	fclose(f);
-
-	return ret;
-}
-
-img4_t *read_img (char *path)
-{
-	/* Create an img4_t to hold the img data */
-	img4_t *ret = malloc (sizeof (img4_t));
-
-	/* Load the file and size into buf and size */
-	FILE *f = fopen (path, "rb");
-	if (!f) return NULL;
-	
-	fseek (f, 0, SEEK_END);
-	ret->size = ftell (f);
-	fseek (f, 0, SEEK_SET);
-
-	ret->buf = malloc(ret->size);
-	if (ret->buf) fread (ret->buf, ret->size, 1, f);
-
-	fclose (f);
-
-	/* Load the file type */
-	char *magic = getImageFileType(ret->buf);
-	if (!magic) {
-		g_print ("[Error] Input file not recognised\n");
-		exit(1);
-	}
-
-	if (!strcmp(magic, "IMG4")) {
-		ret->type = IMG4_TYPE_IMG4;
-	} else if (!strcmp(magic, "IM4P")) {
-		ret->type = IMG4_TYPE_IM4P;
-	} else if (!strcmp(magic, "IM4M")) {
-		ret->type = IMG4_TYPE_IM4M;
-	} else if (!strcmp(magic, "IM4R")) {
-		ret->type = IMG4_TYPE_IM4R;
-	} else {
-		g_print ("[Error] Unrecognised image\n");
-		exit(1);
-	}
-
-	return ret;
-}
-
-char *string_for_img4type (Img4Type type)
-{
-	if (type == IMG4_TYPE_IMG4) {
-		return "IMG4";
-	} else if (type == IMG4_TYPE_IM4P) {
-		return "IM4P";
-	} else if (type == IMG4_TYPE_IM4M) {
-		return "IM4M";
-	} else if (type == IMG4_TYPE_IM4R) {
-		return "IM4R";
-	} else {
-		return "Unknown";
-	}
-}
-
-char *img4_get_component_name (char *buf)
-{
-	asn1Tag_t *t = (asn1Tag_t *) asn1ElementAtIndex(buf, 1);
-	char *comp = 0;
-	size_t len;
-	asn1GetString((char *)t, &comp, &len); 
-
-	/* Return a full string for the component name */
-	if (!strncmp (comp, IMAGE_TYPE_KERNEL, 4)) {
-		return "KernelCache";
-	} else if (!strncmp (comp, IMAGE_TYPE_IBOOT, 4)) {
-		return "iBoot";
-	} else if (!strncmp (comp, IMAGE_TYPE_IBOOT_LLB, 4)) {
-		return "LLB";
-	} else if (!strncmp (comp, IMAGE_TYPE_DEVTREE, 4)) {
-		return "DeviceTree";
-	} else {
-		return comp - (strlen(comp) + 4);
-	}
-}
-
-char *img4_check_compression_type (char *buf)
-{
-	/* Get an element count to ensure we are using an IM4P */
-	int c = asn1ElementsInObject (buf);
-	if (c < 4) {
-		g_print ("[Error] Not enough elements in payload\n");
-		exit(1);
-	}
-
-	/* Try to select the payload tag from the buf */
-	char *tag = asn1ElementAtIndex (buf, 3) + 1;
-	asn1ElemLen_t len = asn1Len (tag);
-	char *data = tag + len.sizeBytes;
-
-	/* Check for either LZSS or LZFSE/BVX2 */
-	if (!strncmp (data, "complzss", 8)) {
-		return "complzss";
-	} else if (!strncmp (data, "bvx2", 4)) {
-		return "bvx2";
-	} else {
-		/* Either the image is encrypted, or corrupt. Be optimistic and guess encrypted */
-		return "encrypted";
-	}
-}
-
-img4_t *img4_decompress_bvx2 (img4_t *file)
-{
-	img4_t *ret = file;
-
-	char *tag = asn1ElementAtIndex (file->buf, 3) + 1;
-	asn1ElemLen_t len = asn1Len (tag);
-	char *data = tag + len.sizeBytes;
-
-	char *compTag = data + len.dataLen;
-	char *fakeCompSizeTag = asn1ElementAtIndex (compTag, 0);
-	char *uncompSizeTag = asn1ElementAtIndex (compTag, 1);
-
-	size_t fake_src_size = asn1GetNumberFromTag ((asn1Tag_t *) fakeCompSizeTag);
-	size_t dst_size = asn1GetNumberFromTag ((asn1Tag_t *) uncompSizeTag);
-
-	size_t src_size = len.dataLen;
-
-	if (fake_src_size != 1) {
-		g_print ("[Error] fake_src_size not 1 but 0x%zx!\n", fake_src_size);
-	}
-
-	ret->buf = malloc (dst_size);
-
-	size_t uncomp_size = lzfse_decode_buffer ((uint8_t *) ret->buf, dst_size,
-											  (uint8_t *) data, src_size,
-											  NULL);
-
-	if (uncomp_size != dst_size) {
-		g_print ("[Error] Expected to decompress %zu bytes but only got %zu bytes\n", dst_size, uncomp_size);
-		exit(1);
-	}			
-
-	file->size = dst_size;
-	
-	return file;
-}
-
-/**
+ * 	img4_print_with_type ()
  * 
+ * 	Loads and prints a given Image4 at the filename location. The part of the
+ * 	file that is printed (--print-all, --print-im4p, etc...) is determined by
+ * 	print_type, this should not be confused with image->type, which although
+ * 	the same type, image->type describes what Image4 variant the image is, and
+ * 	print_type describes what portion of an image to print.
  * 
- */
-void img4_extract_im4p (char *im4p, char *outfile)
+ * 	Args:
+ * 		Image4Type print_type		-	The part of the Image4 to print
+ * 		char *filename				-	The filename of the Image4 to be loaded.
+ * 
+ */	
+void img4_print_with_type (Image4Type print_type, char *filename)
 {
-
-	/*
-Loaded: kernelcache.release.iphone11
-Image4: IM4P
-
-[*] Detecting compression type... bvx2
-[*] Decoding...
-[*] Done!
-
-
-		TODO: Fix component type detection
-		TODO: Fix LZSS decompression
-		TODO: Tidy up code
-
-	*/
-
-	// Check that a valid file was loaded. 
-	img4_t *file = read_img (im4p);
-	if (!file->size || !file->buf) {
-		g_print ("[Error] There was an issue loading the file\n");
-		exit(1);
-	}
-
-	// Print some file information
-	g_print ("Loaded: \t%s\n", im4p);
-	g_print ("Image4 Type: \t%s\n", string_for_img4type(file->type));
-
-
-	char *a = img4_get_component_name (file->buf);
-	g_print ("Component: \t%s\n\n", a);
-
-	/* We can only decrypt full IMG4s or IM4Ps, so ignore if anything else */
-	if (file->type == IMG4_TYPE_IM4M || file->type == IMG4_TYPE_IM4R) {
-		g_print ("[Error] Only .img4 and .im4p file payloads can be extracted\n");
-		exit (1);
-	}
-
-	/* Try to detect a compression type, if there is not luck, the file could be encrypted */
-	char *comp_type = img4_check_compression_type (file->buf);
-
-	/* Create a new img4_t as we are decrpyting/decompressing the buf */
-	img4_t *nimg = malloc (sizeof(img4_t));
-	nimg->type = file->type;
-
-	/* First check if its encrypted */
-	if (!strcmp (comp_type, "encrypted")) {
-
-		g_print ("Encryption: True\n");
-
-/*
-
-Ref: https://github.com/tihmstar/img4tool/blob/master/img4tool/img4tool.cpp#L500
-
-#error This doesn't quite work just yet, I just need to commit so i can use my laptop
-		char *iv = "0afa50a07d119e6ed70cb5d072a3d0d6";
-		char *key = "1a72479271ce1f8e9625c15c1e05e3e681d6408971a1ddc0d2b0c6a937a10d3e";
-		uint8_t fullkey[] = "0afa50a07d119e6ed70cb5d072a3d0d61a72479271ce1f8e9625c15c1e05e3e681d6408971a1ddc0d2b0c6a937a10d3e";
-    AES_cbc_encrypt((const unsigned char*)decPayload.payload(), (unsigned char*)decPayload.payload(), decPayload.payloadSize(), &decKey, iv, AES_DECRYPT);
-
-		unsigned char *enc_out = malloc (file->size);
-
-		AES_KEY aes_key;
-		AES_set_decrypt_key (fullkey, 256, &aes_key);
-		AES_decrypt ((unsigned char *)file->buf, enc_out, &aes_key);
-
-		g_print ("Size: %lu\n", strlen((char *) enc_out));
-		for (int i = 0; i < 10; i++) {
-			g_print ("%02x ", enc_out[i]);
-		}
-
-		FILE *test = fopen (outfile, "wb");
-		fwrite (enc_out, file->size, 1, test);
-		fclose (test);*/
-
-	} else {
-
-		/* Set the new image with the contents of the old */
-		nimg->size = file->size;
-		nimg->buf = file->buf;
-	}
-
-	/* Start banner */
-	g_print ("== Start\n");
-
-	/* Check for a form of compression, and whether the image was decrypted */
-	comp_type = img4_check_compression_type (nimg->buf);
-	g_print ("[*] Detecting compression type...");
-
-	if (!strcmp (comp_type, "complzss")) {
-
-
-	} else if (!strcmp (comp_type, "bvx2")) {
-
-		/* There is BVX2 compression */
-		g_print (" bvx2\n");
-
-		/* Decode/Decompress the payload */
-		g_print ("[*] Decompressing...\n");
-		nimg = img4_decompress_bvx2 (nimg);
-		g_print ("[*] Done\n");
-
-		g_print ("[*] Writing to file: %s\n", outfile);
-		FILE *test = fopen (outfile, "wb");
-		fwrite (nimg->buf, nimg->size, 1, test);
-		fclose (test);
-
-	} else {
-
-		/* There was no compression */
-		g_print ("None!\n");
-
-	}
-
-	if (!strcmp(a, "KernelCache")) {
-		g_print ("\nPlease run img4helper --analyse-kernel to analyse decompressed KernelCache.\n");
-	} else if (!strcmp(a, "iBoot")) {
-		g_print ("\nPlease run img4helper --analyse-iboot to analyse decompressed iBoot.\n");
-	}
-
-
-}
-
-
-/**
- *	print_img4
- *
- *	Handles the input file and a given Img4PrintType which specifies whether the
- *	user requested the entire file to be printed, the im4p or the im4m.
- *
- */
-void print_img4 (Img4PrintType type, char* filename)
-{
-	// TODO: IM4R Parsing
-
-
-	// Check the filename given is not NULL
+	/* Check the given filename is not NULL */
 	if (!filename) {
-		g_print("[Error] No filename given.\n");
-		exit(1);
+		g_print ("[Error] No filename given\n");
+		exit(0);
 	}
 
-	// Load the file into a buffer
-	char *buf = read_from_file (filename);
+	/* Create an image4_t for the filename */
+	image4_t *image = img4_read_image_from_path (filename);
+	char *magic = img4_string_for_image_type (image->type);
 
-	// Check that the buffer actually has some data
-	if (!buf) {
-		g_print("[Error] Blank file\n");
-		exit(1);
-	}
+	/* Print some info contained in the file header */
+	g_print ("Loaded: \t%s\n", filename);
+	g_print ("Image4 Type: \t%s\n", magic);
 
-	// Get the files type
-	char *magic = getImageFileType (buf);
-	if (!magic) {
-		g_print ("[Error] Input file format not recognised\n");
-		exit(1);
-	}
+	/* Switch through different print options */
+	switch (print_type) {
+		case IMG4_TYPE_ALL:
 
-	// Print the loaded file name and the size
-	g_print ("Loaded: %s\n", filename);
-	g_print ("Image4 Type: %s\n\n", magic);
-
-	// Switch through the possible PRINT operations
-	switch (type) {
-		case IMG4_PRINT_ALL:
-
-			// Check what image we're dealing with, then handle as appropriate
+			/* Check what type of image we are dealing with */
 			if (!strcmp (magic, "IMG4")) {
 
-				// Because this in a full img4, we have to extract everything from it.
-				char *im4p = getIM4PFromIMG4 (buf);
-				char *im4m = getIM4MFromIMG4 (buf);
-				//char *im4r = getIM4RFromIMG4 (buf);
+				/* A full Image4 has an IM4P, IM4M and IM4R */
+				char *im4p = getIM4PFromIMG4 (image->buf);
+				char *im4m = getIM4MFromIMG4 (image->buf);
+				char *im4r = getIM4RFromIMG4 (image->buf);
 
-				// Print the IMG4 banner
+				/* Print the component name so it is inline with the loaded and type */
+				g_print ("Component:  \t%s\n\n", img4_get_component_name (im4p));
+
+				/* Print the IMG4 banner */
 				g_print ("IMG4: ------\n");
 
-				// Handle the payload first
-				handle_im4p (im4p, 1);
+				/* Handle the im4p first */
+				img4_handle_im4p (im4p, 1);
 
-				// Make some space between the two
+				/* Make some space between the two */
 				g_print ("\n");
 
-				// Handle the IM4M next
-				handle_im4m (im4m, 1);
+				/* Handle the im4m next */
+				img4_handle_im4m (im4m, 1);
 
-				// More space
+				/* More space */
 				g_print ("\n");
 
-				// Lastly, handle the IM4R
-				//handle_imr4 (im4r, 1);
+				/* Finally, the im4r */
+				img4_handle_im4r (im4r, 1);
+				
 
-			} else if (!strcmp(magic, "IM4P")) {
-				handle_im4p (buf, 1);
-			} else if (!strcmp(magic, "IM4M")) {
-				handle_im4m (buf, 1);
-			} else if (!strcmp(magic, "IM4R")) {
-				//
-			} else {
-				g_print ("[Error] Unrecognised image\n");
-				exit(1);
-			}
-
-			break;
-		case IMG4_PRINT_IM4P:
-
-			// Verify the image is an IM4P or an IMG4
-			if (!strcmp (magic, "IMG4")) {
-				handle_im4p (getIM4PFromIMG4 (buf), 1);
 			} else if (!strcmp (magic, "IM4P")) {
-				handle_im4p (buf, 1);
-			} else {
-				g_print ("[Error] The file does not contain an IM4P (%s)\n", magic);
-				exit(1);
+
+				/* Print the component type */
+				g_print ("Component: \t%s\n\n", img4_get_component_name (image->buf));
+
+				img4_handle_im4p (image->buf, 1);
+
 			}
 
 			break;
-		case IMG4_PRINT_IM4M:
 
-			// Verify the image is an IM4M or an IMG4
-			if (!strcmp (magic, "IMG4")) {
-				handle_im4m (getIM4MFromIMG4 (buf), 1);
-			} else if (!strcmp (magic, "IM4M")) {
-				handle_im4m (buf, 1);
-			} else {
-				g_print ("[Error] The file does not contain an IM4M (%s)\n", magic);
-				exit(1);
-			}
-
-			break;
 		default:
-			exit(1);
+			break;
+
 	}
+
 }

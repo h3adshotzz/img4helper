@@ -1,32 +1,17 @@
+$ img4helper --help
+Usage:
+    img4helper [OPTION?] FILE
 
-$ img4helper --extract-im4p kernelcache.release.iphone11 --outfile/-o kernel.arm64
+Help Options
+    -h, --help          Show help options
 
-img4helper v1.0 - Written by @h3adsh0tzz
-----------------------------------------
+Application Options:
+    -a, --print-all     Print everything from the Image4 file
+    -i, --print-im4p    Print everything from the im4p (Providing there is one)
+    -m, --print-im4m    Print everything from the im4m (Providing there is one)
+    -r, --print-im4r    Print everything from the im4r (Providing there is one)
 
-Loaded: kernelcache.release.iphone11
-Image4: IM4P
+    -e, --extract       Extract a payload from an IMG4 or IM4P (Use with --ivkey and --outfile)
 
-[*] Detecting compression type... bvx2
-[*] Decoding...
-[*] Done!
-
-Please run img4helper --kernel to analyse decompressed kernelcache.
-
---------------------------------------------------------------------------------
---------------------------------------------------------------------------------
-
-$ img4helper --extract-im4p iBoot.complete.img4 --key 0afa50a07d119e6ed70cb5d072a3d0d61a72479271ce1f8e9625c15c1e05e3e681d6408971a1ddc0d2b0c6a937a10d3e --outfile/-o iBoot.arm64
-
-img4helper v1.0 - Written by @h3adsh0tzz
-----------------------------------------
-
-Loaded: iBoot.complete.img4
-Image4: IMG4
-
-[*] File is encrypted, using provided key.... Done!
-[*] Detecting compression type... bvx2
-[*] Decoding...
-[*] Done!
-
-Please run img4helper --iboot to analyse decompressed iBoot.
+    -k, --ivkey         Specify an IVKEY pair to decrypt an im4p (Use with --extract)
+    -o, --outfile       Specify a file to write output too (Default outfile.raw, use with --extract)

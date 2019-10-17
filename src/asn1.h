@@ -141,6 +141,7 @@ int				getSequenceName (const char *buf, char **name, size_t *namelen);
 char 		    *getImageFileType (char *buf);
 char 			*getIM4PFromIMG4 (char *buf);
 char 			*getIM4MFromIMG4 (char *buf);
+char	 		*getIM4RFromIMG4 (char *buf);
 
 
 /////////////////////////////////////////////////

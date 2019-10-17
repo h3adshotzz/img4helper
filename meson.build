@@ -15,6 +15,7 @@ add_project_arguments('-Wno-error=unused-parameter', language : 'c')
 add_project_arguments('-Wno-error=int-conversion', language : 'c')
 add_project_arguments('-Wno-error=missing-field-initializers', language : 'c')
 add_project_arguments('-Wno-error=sign-compare', language : 'c')
+add_project_arguments('-Wno-error=int-conversion', language : 'c')
 
 
 #

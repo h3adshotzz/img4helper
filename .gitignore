@@ -60,3 +60,6 @@ build/
 
 # VSCode config
 .vscode/
+
+# Ignore the ipsw test folder
+test/ipsw

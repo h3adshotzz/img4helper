@@ -556,6 +556,44 @@ char *getIM4MFromIMG4 (char *buf)
 }
 
 
+/**
+ * 
+ */
+char *getIM4RFromIMG4 (char *buf)
+{
+	char *magic;
+	size_t l;
+
+	getSequenceName (buf, &magic, &l);
+
+	if (strncmp("IMG4", magic, l)) {
+		g_print ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
+		exit(1);
+	}
+
+	if (asn1ElementsInObject (buf) < 4) {
+		g_print ("[Error] Not enough elements in SEQUENCE\n");
+		exit(1);
+	}
+
+	char *ret = (char*) asn1ElementAtIndex (buf, 3);
+    if (((asn1Tag_t *) ret)->tagClass != kASN1TagClassContextSpecific) {
+		g_print ("[Error] unexpected Tag 0x%02x, expected SET\n", *(unsigned char*) ret);
+		exit(1);
+	}
+
+	ret += asn1Len (ret + 1).sizeBytes + 1;
+	getSequenceName (ret, &magic, &l);
+
+	if (strncmp("IM4R", magic, 4) == 0) {
+		return ret;
+	} else {
+		g_print ("[Error] Expected \"IM4R\", got \"%s\"\n", magic);
+		exit(1);
+	}
+}
+
+
 /////////////////////////////////////////////////
 /*				 IMG4 Printer     			   */
 /////////////////////////////////////////////////
@@ -570,6 +608,8 @@ void printStringWithKey (char* key, asn1Tag_t *string, char *padding)
 	size_t len;
 
 	asn1GetString((char *)string, &str, &len);
+
+	if (len > 32) len = len + (32 - len);
 
 	printf("%s%s: ", padding, key);
 	printf("%.*s", (int)len, str);

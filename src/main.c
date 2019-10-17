@@ -18,128 +18,117 @@
 */
 
 #include <glib.h>
-
 #include "img4.h"
 
+
 /**
- *	Main loop
+ * 	Main loop
  */
 static GMainLoop *loop = NULL;
 
-
 /**
- *	Option menu
+ * 	Option menu
  */
+static char *print_all = 0;
 static char *print_im4p = 0;
 static char *print_im4m = 0;
-static char *print_all = 0;
+static char *print_im4r = 0;
 
-static char *extract_im4p = 0;
+static char *extract = 0;
+
+static char *ivkey = 0;
 static char *outfile = 0;
 
-static int show_beta_notice = 0;
+static int version = 0;
 
-static GOptionEntry entries[] =
+static GOptionEntry entries [] =
 {
-	/* Print parts of an img4 */
-	{ "print-all", 'a', 0, G_OPTION_ARG_STRING, &print_all, "Print everything from the Image4 file", NULL },
-	{ "print-im4p", 'i', 0, G_OPTION_ARG_STRING, &print_im4p, "Print only the im4p", NULL },
-	{ "print-im4m", 'm', 0, G_OPTION_ARG_STRING, &print_im4m, "Print only the im4m", NULL },
+	/* Print options */
+	{ "print-all", 'a', 0, G_OPTION_ARG_STRING, &print_all, "Print everything from the Image4 file.", NULL },
+	{ "print-im4p", 'i', 0, G_OPTION_ARG_STRING, &print_im4p, "Print everything from the im4p (Providing there is one).", NULL },
+	{ "print-im4m", 'm', 0, G_OPTION_ARG_STRING, &print_im4m, "Print everything from the im4m (Providing there is one).", NULL, },
+	{ "print-im4r", 'r', 0, G_OPTION_ARG_STRING, &print_im4r, "Print everything from the im4r (Providing there is one).", NULL, },
 
-	/* Extracting a full .img4 file into seperate files */
-	{ "extract-im4p", 0, 0, G_OPTION_ARG_STRING, &extract_im4p, "", NULL }, 
+	/* File operations */
+	{ "extract", 'e', 0, G_OPTION_ARG_STRING, &extract, "Extract a payload from an IMG4 or IM4P (Use with --ivkey and --outfile).", NULL },
 
-	/* Outfile */
-	{ "outfile", 'o', 0, G_OPTION_ARG_STRING, &outfile, "Output path for resulting file", NULL },
+	/* Other options */
+	{ "ivkey", 'k', 0, G_OPTION_ARG_STRING, &ivkey, "Specify an IVKEY pair to decrypt an im4p (Use with --extract and --outfile).", NULL },
+	{ "outfile", 'o', 0, G_OPTION_ARG_STRING, &outfile, "Specify a file to write output too (Default outfile.raw, use with --extract", NULL },
 
-	/* Beta notice */
-	{ "beta-notes", 0, 0, G_OPTION_ARG_NONE, &show_beta_notice, "Show notes for the current beta version", NULL },
+	/* Check build info */
+	{ "version", 'v', 0, G_OPTION_ARG_NONE, &version, "View build info.", NULL },
 
-	{ NULL, 0, 0, NULL, NULL, NULL, NULL }
+	{ NULL, 0, 0, NULL, NULL, NULL }
+
 };
 
 
-void beta_notice ()
+/**
+ * 	img4helper version notice. (Will also show beta tag)
+ * 
+ */
+void version_tag ()
 {
-	g_print ("Please read the Github README for more information.\n");
-	g_print ("Latest version can be downloaded from https://s3.cloud-itouk.org/dnlds/releases/img4helper/img4helper-darwinx86-latest.zip");
+	
 }
 
 
+/**
+ * 	Main
+ *
+ */
 int main (int argc, char* argv[])
 {
 	GError *error = NULL;
 	GOptionContext *context = NULL;
 
-	int unknown_opt = 0;
-
+	/* Create a new loop */
 	loop = g_main_loop_new (NULL, FALSE);
 
-	// Create the help menu
+	/* Generate the help menu */
 	context = g_option_context_new ("FILE");
 	g_option_context_add_main_entries (context, entries, NULL);
 
-#if DEBUG
-	// test
-	for (int i = 0; i < argc; i++) {
-		g_print("[%d]: %s\n", i, argv[i]);
-	}
-	g_print ("=========================== \n");
-#endif 
-
-	// Parse any args passed
+	/* Parse command line args */
 	if (!g_option_context_parse (context, &argc, &argv, &error)) {
 		g_critical ("Failed: %s\n", error->message);
-		exit(1);
+		exit(0);
 	}
 
-	// Print version info
+	/* Print banner */
 	g_print ("----------------------------------------\n");
 	g_print ("img4helper %s (c) @h3adsh0tzz 2019\n", VERSION_STRING);
 	g_print ("----------------------------------------\n\n");
 
-	if (show_beta_notice) {
-		beta_notice ();
-		exit(1);
-	}
 
-	// Check for print args
+	/* Check if we are printing data */
 	if (print_all) {
-		print_img4(IMG4_PRINT_ALL, print_all);
+		img4_print_with_type (IMG4_TYPE_ALL, print_all);
 		exit(1);
 	} else if (print_im4p) {
-		print_img4(IMG4_PRINT_IM4P, print_im4p);
+		img4_print_with_type (IMG4_TYPE_IM4P, print_im4p);
 		exit(1);
 	} else if (print_im4m) {
-        print_img4(IMG4_PRINT_IM4M, print_im4m);
+		img4_print_with_type (IMG4_TYPE_IM4M, print_im4m);
+		exit(1);
+	} else if (print_im4r) {
+		img4_print_with_type (IMG4_TYPE_IM4R, print_im4r);
 		exit(1);
 	}
 
-	// Check for an extract
-	if (outfile) {
-		if (extract_im4p) {
-			img4_extract_im4p (extract_im4p, outfile);
-			exit(1);
+	/* Check if we are extracting the payload */
+	if (extract) {
+		if (outfile) {
+			//img4_extract_im4p (extract, outfile);
+		} else {
+			g_print ("[Error] No outfile specified. Will extract payload to outfile.raw\n");
+			//img4_extract_im4p (extract, "outfile.raw");
 		}
 	}
 
-	// If nothing is set, or what is given is not recognised, print the help
-	g_option_context_get_help (context, TRUE, NULL);
-	g_print ("Please run with --help to see the list of options\n");
+	/* We can only get to this point if nothing is set */
+	g_print ("%s\n", g_option_context_get_help (context, TRUE, NULL));
 
 	return 0;
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
