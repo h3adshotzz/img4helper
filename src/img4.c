@@ -413,6 +413,85 @@ void img4_handle_im4r (char *buf, int tabs)
 
 
 //////////////////////////////////////////////////////////////////
+/*				    Image Decomp/Decrypt						*/
+//////////////////////////////////////////////////////////////////
+
+
+/**
+ * 	img4_check_compression_type ()
+ * 
+ * 	Takes a given buffer, hopefully verified to be an im4p, and checks
+ * 	the compression or encryption state of that buffer. The return value
+ * 	is of the Image4CompressionType type. 
+ * 
+ * 	Args:
+ * 		char *buf 				-	The verified im4p buffer
+ * 
+ * 	Return:
+ * 		Image4CompressionType	-	The type of compression
+ * 
+ */
+Image4CompressionType img4_check_compression_type (char *buf)
+{
+	/* Get the element count and ensure buf is an im4p */
+	int c = asn1ElementsInObject (buf);
+	if (c < 4) {
+		g_print ("[Error] Not enough elements in given payload\n");
+		exit (0);
+	}
+
+	/* Try to select the payload tag from the buffer */
+	char *tag = asn1ElementAtIndex (buf, 3) + 1;
+	asn1ElemLen_t len = asn1Len (tag);
+	char *data = tag + len.sizeBytes;
+
+	/* Check for either lzss or bvx2/lzfse */
+	if (!strncmp (data, "complzss", 8)) {
+		return IMG4_COMP_LZSS;
+	} else if (!strncmp (data, "bvx2", 4)) {
+		return IMG4_COMP_BVX2;
+	} else if (!strncmp (data, "TEXT", 4)) {
+		return IMG4_COMP_NONE;
+	} else {
+		return IMG4_COMP_ENCRYPTED;
+	}
+
+}
+
+
+//////////////////////////////////////////////////////////////////
+/*				    Image Extracting Func						*/
+//////////////////////////////////////////////////////////////////
+
+
+/**
+ * 
+ */
+void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
+{
+	/* Load the image */
+	image4_t *image = img4_read_image_from_path (infile);
+
+	/* Check that the image was loaded properly */
+	if (!image->size || !image->buf) {
+		g_print ("[Error] There was an issue loading the file\n");
+		exit (0);
+	}
+
+	/* Print some file information */
+	g_print ("Loaded: \t%s\n", infile);
+	g_print ("Image4 Type: \t%s\n", img4_string_for_image_type (image->type));
+	g_print ("Component: \t%s\n\n", img4_get_component_name (image->buf));
+
+	/* Get compression type */
+	Image4CompressionType comp = img4_check_compression_type (image->buf);
+	g_print ("t: %d\n", comp);
+
+}
+
+
+
+//////////////////////////////////////////////////////////////////
 /*				    Image Printing Funcs						*/
 //////////////////////////////////////////////////////////////////
 

@@ -119,12 +119,17 @@ int main (int argc, char* argv[])
 
 	/* Check if we are extracting the payload */
 	if (extract) {
-		if (outfile) {
-			//img4_extract_im4p (extract, outfile);
-		} else {
+
+		/* Check that an outfile name was specified, if not set out and notify */
+		if (!outfile) {
 			g_print ("[Error] No outfile specified. Will extract payload to outfile.raw\n");
-			//img4_extract_im4p (extract, "outfile.raw");
+			outfile = "outfile.raw";
 		}
+
+		/* Call the im4p extract function */
+		img4_extract_im4p (extract, outfile, ivkey);
+
+		exit (1);
 	}
 
 	/* We can only get to this point if nothing is set */

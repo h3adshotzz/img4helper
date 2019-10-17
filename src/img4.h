@@ -89,6 +89,74 @@ char 		*img4_get_component_name (char *buf);
 
 
 /**
+ * 	Functions for handling different compression and encryption
+ * 	types of iOS firmware components. 
+ * 
+ * 	There are two types of compression used with iOS firmware files,
+ * 	namely bvx2 (lzfse) and lzss. The type of compression can be
+ * 	observed in a hexdump of a im4p/img4.
+ * 
+ * 	Image4 files can be encrypted with an AES iv-key. Image4's
+ * 	contain a KBAG in the im4p which is an encrypted AES IVKEY with
+ * 	the specific device AP Group ID (GID) key. 
+ * 
+ * 	The Image4CompressionType type represents the four possible states
+ * 	of compression an Image4 can be in. If the type is encrypted, the
+ * 	process of checking the compression type and handling should be
+ * 	performed again, which will determine whether the file was actually
+ * 	encrypted, or if the key was valid.
+ * 
+ * 	img4_check_compression_type () will verify what type of compression
+ * 	the image is using. The value can by of four types, bvx2, lzss, enc
+ * 	or nocomp. 
+ * 
+ * 	img4_decompress_bvx2 () will decompress a given buffer using bvx2.
+ * 	The given buffer should have been verified before being given to
+ * 	this function as it won't be verified again.
+ * 
+ * 	img4_decompress_lzss () will decompress a given buffer using lzss.
+ * 	The given buffer should have been verified before being given to
+ * 	this function as it won't be verified again.
+ * 
+ * 	img$_decrypt_bytes () will decrypt a given buffer with a given ivkey
+ * 	pair. The given buffer should have been verified before being given to
+ * 	this function as it won't be verified again.
+ */
+
+typedef enum {
+
+	/* bvx2 and lzss */
+	IMG4_COMP_BVX2,
+	IMG4_COMP_LZSS,
+
+	/* encryption */
+	IMG4_COMP_ENCRYPTED,
+
+	/* None */
+	IMG4_COMP_NONE
+
+} Image4CompressionType;
+
+Image4CompressionType img4_check_compression_type (char *buf);
+
+char *img4_decompress_bvx2 (char *buf);
+char *img4_decompress_lzss (char *buf);
+
+char *img4_decrypt_bytes (char *buf, char *key);
+
+
+/**
+ * 	Functions for extracting sections of Image4 files.
+ * 
+ * 	img4_extract_im4p () decompresses and decrypts im4p sections as necessary
+ * 	from a specified file, decrypts if required with the ivkey and writes
+ * 	the result to the specified outfile.
+ * 
+ */
+void img4_extract_im4p (char *infile, char *outfile, char *ivkey);
+
+
+/**
  * 	Functions for handling specific types of Image4 files.
  * 
  * 	Note: Full .img4 files should call handle_img4(), which will then
