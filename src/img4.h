@@ -139,8 +139,8 @@ typedef enum {
 
 Image4CompressionType img4_check_compression_type (char *buf);
 
-char *img4_decompress_bvx2 (char *buf);
-char *img4_decompress_lzss (char *buf);
+image4_t *img4_decompress_bvx2 (image4_t *img);
+image4_t *img4_decompress_lzss (image4_t *img);
 
 char *img4_decrypt_bytes (char *buf, char *key);
 

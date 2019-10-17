@@ -467,6 +467,45 @@ Image4CompressionType img4_check_compression_type (char *buf)
 /**
  * 
  */
+image4_t *img4_decompress_bvx2 (image4_t *img)
+{
+	char *tag = asn1ElementAtIndex (img->buf, 3) + 1;
+	asn1ElemLen_t len = asn1Len (tag);
+	char *data = tag + len.sizeBytes;
+
+	char *compTag = data + len.dataLen;
+	char *fakeCompSizeTag = asn1ElementAtIndex (compTag, 0);
+	char *uncompSizeTag = asn1ElementAtIndex (compTag, 1);
+
+	size_t fake_src_size = asn1GetNumberFromTag ((asn1Tag_t *) fakeCompSizeTag);
+	size_t dst_size = asn1GetNumberFromTag ((asn1Tag_t *) uncompSizeTag);
+
+	size_t src_size = len.dataLen;
+
+	if (fake_src_size != 1) {
+		g_print ("[Error] fake_src_size not 1 but 0x%zx!\n", fake_src_size);
+	}
+
+	img->buf = malloc (dst_size);
+
+	size_t uncomp_size = lzfse_decode_buffer ((uint8_t *) img->buf, dst_size,
+											  (uint8_t *) data, src_size,
+											  NULL);
+
+	if (uncomp_size != dst_size) {
+		g_print ("[Error] Expected to decompress %zu bytes but only got %zu bytes\n", dst_size, uncomp_size);
+		exit(1);
+	}			
+
+	img->size = dst_size;
+	
+	return img;
+
+}
+
+/**
+ * 
+ */
 void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
 {
 	/* Load the image */
@@ -483,9 +522,46 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
 	g_print ("Image4 Type: \t%s\n", img4_string_for_image_type (image->type));
 	g_print ("Component: \t%s\n\n", img4_get_component_name (image->buf));
 
+	/* Create an image to hold the decompressed one */
+	image4_t *newimage = malloc (sizeof (image4_t));
+
+	/* Start decompression process */
+	g_print ("[*] Detecting compression type...");
+
 	/* Get compression type */
 	Image4CompressionType comp = img4_check_compression_type (image->buf);
-	g_print ("t: %d\n", comp);
+	if (comp == IMG4_COMP_BVX2) {
+
+		/* Complete the first log */
+		g_print (" bvx2\n");
+
+		/* Decompress the payload */
+		g_print ("[*] Decompressing im4p...");
+		newimage = img4_decompress_bvx2 (image);
+
+		/* Check if that was successful */
+		if (!newimage->buf) {
+			g_print (" error. There was a problem decompressing the im4p\n");
+			exit (0);
+		}
+
+		/* Print success */
+		g_print (" done!\n");
+
+	} else {
+		g_print ("\n[*] Cannot handle compression type. Exiting...\n");
+		exit (0);
+	}
+
+	/* Print that we are now writing to the file */
+	g_print ("[*] Writing decompressed payload to file: %s\n", outfile);
+
+	/* Write the buffer to the outfile */
+	FILE *o = fopen (outfile, "wb");
+	fwrite (newimage->buf, newimage->size, 1, o);
+	fclose (o);
+
+	//g_print ("\nPlease run img4helper with --analyse to analyse the decompressed image.\n");
 
 }
 
