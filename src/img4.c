@@ -549,6 +549,15 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
 		g_print (" done!\n");
 
 	} else {
+
+		/**
+		 * 	TODO List:
+		 * 		- Check if the file file is already decompressed (strncmp __TEXT)
+		 * 		- Decompress lzss
+		 * 		- Decrypt then decompress
+		 * 		- Comment this and img4_decompress_bvx2 ()
+		 */
+
 		g_print ("\n[*] Cannot handle compression type. Exiting...\n");
 		exit (0);
 	}
