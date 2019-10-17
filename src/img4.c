@@ -486,7 +486,25 @@ void img4_print_with_type (Image4Type print_type, char *filename)
 				/* Print the component type */
 				g_print ("Component: \t%s\n\n", img4_get_component_name (image->buf));
 
+				/* Handle the im4p */
 				img4_handle_im4p (image->buf, 1);
+
+			} else if (!strcmp (magic, "IM4M")) {
+
+				/* Handle the im4m */
+				g_print ("\n");
+				img4_handle_im4m (image->buf, 1);
+
+			} else if (!strcmp (magic, "IM4R")) {
+
+				/* Handle the im4r */
+				g_print ("\n");
+				img4_handle_im4r (image->buf, 1);
+
+			} else {
+
+				/* Error */
+				g_print ("[Error] Could not find an IMG4, IM4P, IM4M or IM4R\n");
 
 			}
 
