@@ -119,8 +119,6 @@ char *img4_string_for_image_type (Image4Type type)
 
 
 /**
- * 	TODO: THIS NEEDS TO BE FINISHED!
- * 
  * 	img4_get_component_name ()
  * 
  * 	Takes an image buffer and determines which firmware file is has been taken
@@ -465,10 +463,26 @@ Image4CompressionType img4_check_compression_type (char *buf)
 
 
 /**
+ * 	img4_decompress_bvx2 ()
+ * 
+ * 	Takes the given image4_t and verifies that it is an im4p, and not
+ * 	an entire img4 or another type of Image4. The decompression is
+ * 	run, a new image4_t is constructed and returned.
+ * 
+ * 	Args:
+ * 		image4_t *img		-	Compressed Image4 file
+ * 
+ * 	Returns:
+ * 		image4_t			- 	Decompressed Image4 file
  * 
  */
 image4_t *img4_decompress_bvx2 (image4_t *img)
 {
+	/* TODO: Check if the image is an im4p and extract it so we can handle */
+	if (img->type == IMG4_TYPE_IMG4) {
+		img->buf = getIM4PFromIMG4 (img->buf);
+	}
+
 	char *tag = asn1ElementAtIndex (img->buf, 3) + 1;
 	asn1ElemLen_t len = asn1Len (tag);
 	char *data = tag + len.sizeBytes;
@@ -504,7 +518,17 @@ image4_t *img4_decompress_bvx2 (image4_t *img)
 }
 
 /**
+ * 	img4_extract_im4p ()
  * 
+ * 	Loads a given infile, verifies and prints some information, checks its
+ * 	compression type, decompresses and writes the new image to the given
+ * 	outfile. If the image requires an ivkey, that is passed aswell.
+ * 
+ * 	Args:
+ * 		char *infile		-		Path of input image
+ * 		char *outfile 		-		Path of output raw file
+ * 		char *ivkey			-		Encryption key
+ * 	
  */
 void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
 {
