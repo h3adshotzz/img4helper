@@ -517,6 +517,47 @@ image4_t *img4_decompress_bvx2 (image4_t *img)
 
 }
 
+
+char *img4_decrypt_bytes (image4_t *img, char *key)
+{
+	char *tag;
+    asn1ElemLen_t len;
+    unsigned char *data;
+    const unsigned char *orig;
+    unsigned char *out;
+    unsigned char *iv;
+    size_t tst = 0;
+    const unsigned char *k;
+    AES_KEY dec_key;
+
+	tag = asn1ElementAtIndex (img->buf, 3) + 1;
+    len = asn1Len (tag);
+    // So data is tag MINUS len.sizeBytes except asn1Len (tag) would
+    // Imply that the length of tag IS len.sizeBytes so data should be NULL
+    data = (unsigned char *) tag + len.sizeBytes;
+
+    if (img->size % BLOCK_SIZE) {
+        tst = img->size + (BLOCK_SIZE - (img->size % BLOCK_SIZE)) + BLOCK_SIZE;
+    }
+
+	g_print ("imgsize: %zu, blocksize: %zu, newimgsize: %d\n",
+             img->size, tst, BLOCK_SIZE);
+    img->size = tst;
+
+    orig = (unsigned char *)img->buf;
+    out = malloc (img->size);
+
+	iv = (unsigned char *)"1ef67798a0c53116a47145dfff0aac60";
+    k = (unsigned char *)"9a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f";
+
+    AES_set_encrypt_key (k, sizeof(k) * 8, &dec_key);
+    AES_cbc_encrypt (data, out, len.dataLen, &dec_key, iv, AES_DECRYPT);
+    //AES_decrypt (orig, out, &dec_key);
+
+    return (char *) out;
+}
+
+
 /**
  * 	img4_extract_im4p ()
  * 
@@ -543,6 +584,7 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
 
 	/* If the file is an IMG4, we need to extract the im4p */
 	if (image->type == IMG4_TYPE_IMG4) {
+		g_print ("debug: extracting im4p from img4\n");
 		image->buf = getIM4PFromIMG4 (image->buf);
 	} else {
 		if (image->type != IMG4_TYPE_IM4P) {
@@ -581,6 +623,16 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
 
 		/* Print success */
 		g_print (" done!\n");
+
+	} else if (comp == IMG4_COMP_ENCRYPTED) {
+
+		/* Complete the first log */
+		g_print (" encrypted\n");
+
+		/* Decrypt the payload */
+		g_print ("[*] Decrypting with ivkey: 1ef67798a0c53116a47145dfff0aac609a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f\n");
+		newimage->buf = img4_decrypt_bytes (image, "1ef67798a0c53116a47145dfff0aac609a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f");
+
 
 	} else {
 

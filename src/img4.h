@@ -23,9 +23,13 @@
 /* Headers */
 #include <glib.h>
 #include <lzfse.h>
+#include <openssl/aes.h>
+#include <openssl/sha.h>
 #include "asn1.h"
 #include "lzss.h"
 #include "config.h"
+
+#define BLOCK_SIZE		(16)
 
 /* These are different types of Image4 */
 #define IMAGE_TYPE_DIAG					"diag"	// diagnostics
@@ -142,7 +146,7 @@ Image4CompressionType img4_check_compression_type (char *buf);
 image4_t *img4_decompress_bvx2 (image4_t *img);
 image4_t *img4_decompress_lzss (image4_t *img);
 
-char *img4_decrypt_bytes (char *buf, char *key);
+char *img4_decrypt_bytes (image4_t *img, char *key);
 
 
 /**

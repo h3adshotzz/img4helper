@@ -8,7 +8,7 @@ sources = ['main.c', 'img4.c', 'asn1.c', 'lzss.c']
 #
 #	Dependencies
 #
-deps = [glib_dep, lzfse_dep]
+deps = [glib_dep, lzfse_dep, openssl_dep]
 
 
 #
