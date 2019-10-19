@@ -137,6 +137,11 @@ char *img4_get_component_name (char *buf)
 	size_t l;
 	getSequenceName(buf, &magic, &l);
 
+	if (!strncmp (magic, "img4", 4)) {
+		g_print ("magic is img4\n");
+		buf = getIM4PFromIMG4 (buf);
+	}
+
 	char *raw = asn1ElementAtIndex(buf, 1) + 2;
 
 	if (!strncmp (raw, "ibot", 4)) {
@@ -478,11 +483,6 @@ Image4CompressionType img4_check_compression_type (char *buf)
  */
 image4_t *img4_decompress_bvx2 (image4_t *img)
 {
-	/* TODO: Check if the image is an im4p and extract it so we can handle */
-	if (img->type == IMG4_TYPE_IMG4) {
-		img->buf = getIM4PFromIMG4 (img->buf);
-	}
-
 	char *tag = asn1ElementAtIndex (img->buf, 3) + 1;
 	asn1ElemLen_t len = asn1Len (tag);
 	char *data = tag + len.sizeBytes;
@@ -541,6 +541,16 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
 		exit (0);
 	}
 
+	/* If the file is an IMG4, we need to extract the im4p */
+	if (image->type == IMG4_TYPE_IMG4) {
+		image->buf = getIM4PFromIMG4 (image->buf);
+	} else {
+		if (image->type != IMG4_TYPE_IM4P) {
+			g_print ("[Error] Image not .img4 or .im4p\n");
+			exit (0);
+		}
+	}
+
 	/* Print some file information */
 	g_print ("Loaded: \t%s\n", infile);
 	g_print ("Image4 Type: \t%s\n", img4_string_for_image_type (image->type));
@@ -550,7 +560,7 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
 	image4_t *newimage = malloc (sizeof (image4_t));
 
 	/* Start decompression process */
-	g_print ("[*] Detecting compression type...");
+	g_print ("[*] Detecting compression type..."); 
 
 	/* Get compression type */
 	Image4CompressionType comp = img4_check_compression_type (image->buf);
