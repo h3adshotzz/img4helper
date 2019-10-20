@@ -520,39 +520,106 @@ image4_t *img4_decompress_bvx2 (image4_t *img)
 
 char *img4_decrypt_bytes (image4_t *img, char *_key)
 {
-	char *tag = asn1ElementAtIndex (img->buf, 3) + 1;
-	asn1ElemLen_t len = asn1Len (tag);
+
+	/* Split the _key into an IV and KEY */
+	char decIV[33];
+	memcpy (decIV, &_key[0], 32);
+	decIV[32] = '\0';
+	g_print ("IV: %s\n", decIV);
 	
-	char *data = tag + len.sizeBytes;
-	char *ret = malloc (len.dataLen);
+	char decKey[65];
+	memcpy (decKey, &_key[32], 64);
+	decKey[64] = '\0';
+	g_print ("Key: %s\n", decKey);
 
-	size_t tst = 0;
-
-	if (img->size % BLOCK_SIZE) {
-        tst = img->size + (BLOCK_SIZE - (img->size % BLOCK_SIZE)) + BLOCK_SIZE;
-    }
-
+	/* Create an uint8_t array for both key and iv of the correct size */
 	uint8_t key[32] = { };
 	uint8_t iv[16] = { };
 
-	char *decryptIV = "1ef67798a0c53116a47145dfff0aac60";
-	char *decryptKey = "9a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f";
-
+	/* Copy the hex data for the IV */
 	for (int i = 0; i < sizeof (iv); i++) {
 		unsigned int t;
-		sscanf (decryptIV+i*2,"%02x",&t);
+		sscanf (decIV+i*2,"%02x",&t);
 		iv[i] = t;
 	}
 
 	for (int i = 0; i < sizeof (key); i++) {
 		unsigned int t;
-		sscanf (decryptKey+i*2,"%02x",&t);
+		sscanf (decKey+i*2,"%02x",&t);
 		key[i] = t;
 	}
 
+	/* Obtain the payload from the correct tag */
+	char *tag = asn1ElementAtIndex (img->buf, 3) + 1;
+	asn1ElemLen_t len = asn1Len (tag);
+
+	/* Load the payload into data */
+	char *data = tag + len.sizeBytes;
+	char *ret = malloc (len.dataLen);
+
+	/* Calculate a size that is a multiple of the block size */
+	size_t tst = 0;
+	if (img->size % BLOCK_SIZE) tst = img->size + (BLOCK_SIZE - (img->size % BLOCK_SIZE)) + BLOCK_SIZE;
+
+	/* Use CommonCrypto's decryption function */
+	/* TODO: Implement OpenSSL for non-Apple systems */
 	CCCryptorStatus dec = CCCrypt (kCCDecrypt, kCCAlgorithmAES, 0, key, sizeof(key), iv, data, len.dataLen, ret, tst, NULL);
 
+	/* Debug: Print the result code for CC */
 	g_print ("status: %d\n", dec);
+
+
+	/*
+
+		TODO: Fix bvx2 decompression on images that have been decrypted.
+
+		The current issue is that when you try to decompress a decrypted image, the sha1 of the result
+		is always different and does not decompress fully.
+
+		The way img4_decompress_bvx2() works is it fetched a tag in the asn1 payload which contains the
+		size of the decompressed payload.
+
+		Here, I cannot get that tag either before or after i decrypt the image, so i am unsure how to
+		calculate the size of the decompress image to write back.
+
+		Terminal output running lzfse manually on the decrypted payload:
+
+		20:29 h3adsh0tzz@h3adsh0tzzs-iMac.local ~/Sources/img4helper/build% lzfse -decode -i outfile3.raw -o iBoot.decrypted.decompressed.arm64 -v                                                                                                                                         (git)-[master]
+			LZFSE decode
+			Input: outfile3.raw
+			Output: iBoot.decrypted.decompressed.arm64
+			Input size: 133173248 B
+			Output size: 1481600 B
+			Compression ratio: 0.011
+			Speed: 2.81 ns/B, 339.74 MB/s
+			
+		20:30 h3adsh0tzz@h3adsh0tzzs-iMac.local ~/Sources/img4helper/build% strings iBoot.decrypted.decompressed.arm64| grep iBoot                                                                                                                                                         (git)-[master]
+			iBoot for d22, Copyright 2007-2019, Apple Inc.
+			iBoot-5540.0.129
+			VVVV = vertical offset in pixels (0=no offset=iBoot default behavior)
+			failed to execute upgrade command from iBoot
+			DCS Init Lib Built for: iBoot SOC
+			iBoot
+			iBoot-5540.0.129
+			chosen/iBoot
+			[iBoot Panic]: 
+			iBootIm
+	
+	tag = asn1ElementAtIndex (ret, 3) + 1;
+	len = asn1Len (tag);
+	
+	data = tag + len.sizeBytes;
+
+	char *ct = ret + len.dataLen;
+	char *ust = asn1ElementAtIndex (ct, 1);
+
+	size_t dst_size = asn1GetNumberFromTag ((asn1Tag_t *) ust);
+	
+	size_t s = lzfse_decode_buffer ((uint8_t *) ret, dst_size,
+									(uint8_t *) ret, len.dataLen,
+									NULL);
+
+	//size_t uncomp_size = lzfse_decode_buffer ((uint8_t *) ret, )*/
 
 	return ret;
 }
@@ -632,7 +699,6 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
 		/* Decrypt the payload */
 		g_print ("[*] Decrypting with ivkey: 1ef67798a0c53116a47145dfff0aac609a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f\n");
 		newimage->buf = img4_decrypt_bytes (image, "1ef67798a0c53116a47145dfff0aac609a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f");
-
 
 	} else {
 

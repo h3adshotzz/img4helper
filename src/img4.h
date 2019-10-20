@@ -73,6 +73,7 @@ typedef enum {
 	IMG4_TYPE_IM4R
 } Image4Type;
 
+
 /**
  * 	This is not a struct for the file structure, its to hold some
  * 	info, the size and a loaded buffer of the img4/im4p/im4m/im4r
@@ -154,7 +155,7 @@ Image4CompressionType img4_check_compression_type (char *buf);
 image4_t *img4_decompress_bvx2 (image4_t *img);
 image4_t *img4_decompress_lzss (image4_t *img);
 
-char *img4_decrypt_bytes (image4_t *img, char *key);
+char *img4_decrypt_bytes (image4_t *img, char *_key);
 
 
 /**
