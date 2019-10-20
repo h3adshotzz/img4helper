@@ -23,8 +23,16 @@
 /* Headers */
 #include <glib.h>
 #include <lzfse.h>
-#include <openssl/aes.h>
-#include <openssl/sha.h>
+
+#if defined(__APPLE__) && defined(__MACH__)
+#	define IMG4_HELPER_USE_COMMONCRYPTO
+#	include <CommonCrypto/CommonCrypto.h>
+#else
+#	define IMG4_HELPER_USE_OPENSSL
+#	include <openssl/aes.h>
+#	include <openssl/sha.h
+#endif
+
 #include "asn1.h"
 #include "lzss.h"
 #include "config.h"

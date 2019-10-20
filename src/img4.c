@@ -518,45 +518,43 @@ image4_t *img4_decompress_bvx2 (image4_t *img)
 }
 
 
-char *img4_decrypt_bytes (image4_t *img, char *key)
+char *img4_decrypt_bytes (image4_t *img, char *_key)
 {
-	char *tag;
-    asn1ElemLen_t len;
-    unsigned char *data;
-    const unsigned char *orig;
-    unsigned char *out;
-    unsigned char *iv;
-    size_t tst = 0;
-    const unsigned char *k;
-    AES_KEY dec_key;
+	char *tag = asn1ElementAtIndex (img->buf, 3) + 1;
+	asn1ElemLen_t len = asn1Len (tag);
+	
+	char *data = tag + len.sizeBytes;
+	char *ret = malloc (len.dataLen);
 
-	tag = asn1ElementAtIndex (img->buf, 3) + 1;
-    len = asn1Len (tag);
-    // So data is tag MINUS len.sizeBytes except asn1Len (tag) would
-    // Imply that the length of tag IS len.sizeBytes so data should be NULL
-    data = (unsigned char *) tag + len.sizeBytes;
+	size_t tst = 0;
 
-	return (char *) data;
-/*
-    if (img->size % BLOCK_SIZE) {
+	if (img->size % BLOCK_SIZE) {
         tst = img->size + (BLOCK_SIZE - (img->size % BLOCK_SIZE)) + BLOCK_SIZE;
     }
 
-	g_print ("imgsize: %zu, blocksize: %zu, newimgsize: %d\n",
-             img->size, tst, BLOCK_SIZE);
-    img->size = tst;
+	uint8_t key[32] = { };
+	uint8_t iv[16] = { };
 
-    orig = (unsigned char *)img->buf;
-    out = malloc (img->size);
+	char *decryptIV = "1ef67798a0c53116a47145dfff0aac60";
+	char *decryptKey = "9a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f";
 
-	iv = (unsigned char *)"1ef67798a0c53116a47145dfff0aac60";
-    k = (unsigned char *)"9a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f";
+	for (int i = 0; i < sizeof (iv); i++) {
+		unsigned int t;
+		sscanf (decryptIV+i*2,"%02x",&t);
+		iv[i] = t;
+	}
 
-    AES_set_encrypt_key (k, sizeof(k) * 8, &dec_key);
-    AES_cbc_encrypt (data, out, len.dataLen, &dec_key, iv, AES_DECRYPT);
-    //AES_decrypt (orig, out, &dec_key);
+	for (int i = 0; i < sizeof (key); i++) {
+		unsigned int t;
+		sscanf (decryptKey+i*2,"%02x",&t);
+		key[i] = t;
+	}
 
-    return (char *) out;*/
+	CCCryptorStatus dec = CCCrypt (kCCDecrypt, kCCAlgorithmAES, 0, key, sizeof(key), iv, data, len.dataLen, ret, tst, NULL);
+
+	g_print ("status: %d\n", dec);
+
+	return ret;
 }
 
 
