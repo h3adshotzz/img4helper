@@ -536,6 +536,8 @@ char *img4_decrypt_bytes (image4_t *img, char *key)
     // Imply that the length of tag IS len.sizeBytes so data should be NULL
     data = (unsigned char *) tag + len.sizeBytes;
 
+	return (char *) data;
+/*
     if (img->size % BLOCK_SIZE) {
         tst = img->size + (BLOCK_SIZE - (img->size % BLOCK_SIZE)) + BLOCK_SIZE;
     }
@@ -554,7 +556,7 @@ char *img4_decrypt_bytes (image4_t *img, char *key)
     AES_cbc_encrypt (data, out, len.dataLen, &dec_key, iv, AES_DECRYPT);
     //AES_decrypt (orig, out, &dec_key);
 
-    return (char *) out;
+    return (char *) out;*/
 }
 
 
