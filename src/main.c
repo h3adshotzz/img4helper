@@ -38,6 +38,7 @@ static char *extract = 0;
 
 static char *ivkey = 0;
 static char *outfile = 0;
+static int *dont_decomp = 0;
 
 static int version = 0;
 
@@ -55,6 +56,7 @@ static GOptionEntry entries [] =
 	/* Other options */
 	{ "ivkey", 'k', 0, G_OPTION_ARG_STRING, &ivkey, "Specify an IVKEY pair to decrypt an im4p (Use with --extract and --outfile).", NULL },
 	{ "outfile", 'o', 0, G_OPTION_ARG_STRING, &outfile, "Specify a file to write output too (Default outfile.raw, use with --extract", NULL },
+	{ "dont-decompress", 0, 0, G_OPTION_ARG_NONE, &dont_decomp, "Do not decompress a given encrypted boot file (iBoot, LLB, etc)", NULL },
 
 	/* Check build info */
 	{ "version", 'v', 0, G_OPTION_ARG_NONE, &version, "View build info.", NULL },
@@ -127,7 +129,7 @@ int main (int argc, char* argv[])
 		}
 
 		/* Call the im4p extract function */
-		img4_extract_im4p (extract, outfile, ivkey);
+		img4_extract_im4p (extract, outfile, ivkey, dont_decomp);
 
 		exit (1);
 	}

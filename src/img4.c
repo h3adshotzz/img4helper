@@ -518,19 +518,40 @@ image4_t *img4_decompress_bvx2 (image4_t *img)
 }
 
 
-char *img4_decrypt_bytes (image4_t *img, char *_key)
+/**
+ * 	img4_decrypt_bytes ()
+ * 
+ * 	Takes a given image4_t and a ivkey pair. The key is split into
+ * 	seperate IV and Key that can be handled by CommonCrypto/Openssl.
+ * 	
+ * 	The given image4_t will then be decrypted, and decompressed
+ * 	providing that it can be identified as a supported compression
+ * 	type.
+ * 
+ * 	That decrypted image is then decompressed and passed back to caller.
+ * 
+ * 	Args:
+ * 		image4_t *img 		-	Image to decrypt and decompressed
+ * 		char *_key 			-	Full, combined AES IVKEY.
+ * 		int dont_decomp		-	Don't decompress decrypted file
+ * 
+ * 	Returns:
+ * 		char *				-	Decrypted, decompressed image4 payload.
+ * 
+ */
+char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 {
 
 	/* Split the _key into an IV and KEY */
 	char decIV[33];
 	memcpy (decIV, &_key[0], 32);
 	decIV[32] = '\0';
-	g_print ("IV: %s\n", decIV);
+	//g_print ("IV: %s\n", decIV);
 	
 	char decKey[65];
 	memcpy (decKey, &_key[32], 64);
 	decKey[64] = '\0';
-	g_print ("Key: %s\n", decKey);
+	//g_print ("Key: %s\n", decKey);
 
 	/* Create an uint8_t array for both key and iv of the correct size */
 	uint8_t key[32] = { };
@@ -542,7 +563,6 @@ char *img4_decrypt_bytes (image4_t *img, char *_key)
 		sscanf (decIV+i*2,"%02x",&t);
 		iv[i] = t;
 	}
-
 	for (int i = 0; i < sizeof (key); i++) {
 		unsigned int t;
 		sscanf (decKey+i*2,"%02x",&t);
@@ -566,62 +586,73 @@ char *img4_decrypt_bytes (image4_t *img, char *_key)
 	CCCryptorStatus dec = CCCrypt (kCCDecrypt, kCCAlgorithmAES, 0, key, sizeof(key), iv, data, len.dataLen, ret, tst, NULL);
 
 	/* Debug: Print the result code for CC */
-	g_print ("status: %d\n", dec);
+	if (dec == 0) {
+		g_print ("[*] File decrypted successfully.\n");
+	}
 
 
-	/*
+	/**
+	 * 	Decompression of the decrypted boot files is a bit odd
+	 * 
+	 * 	iBoot is compressed with bvx2, iBEC isn't compressed at all, i have
+	 * 	not yet tested anything else.
+	 * 
+	 * 	So, this function should check that the decrypted buffer header
+	 * 	contains a compression magic.
+	 * 
+	 */
+	g_print ("[*] Detecting compression type...");
 
-		TODO: Fix bvx2 decompression on images that have been decrypted.
+	if (!strncmp (ret, "bvx2", 4) && !dont_decomp) {
+		g_print (" bvx2.\n");
+		return (char *) img4_decompress_bvx2_decrypted_buffer (ret, len.dataLen);
+	} else {
+		g_print (" none.\n");
+		return ret;
+	}
+}
 
-		The current issue is that when you try to decompress a decrypted image, the sha1 of the result
-		is always different and does not decompress fully.
 
-		The way img4_decompress_bvx2() works is it fetched a tag in the asn1 payload which contains the
-		size of the decompressed payload.
+/**
+ * 	img4_decompress_bvx2_decrypted_buffer ()
+ * 
+ * 	Takes a given byte stream, and a given size (which should reflect
+ * 	that byte stream). `in` will then be decompressed and returned.
+ * 
+ * 	Args:
+ * 		char *in		-	A bytestream to be decompressed
+ * 		size_t insize 	-	Size of the bytestream.
+ * 
+ * 	Returns:
+ * 		uint8_t 		-	Decompressed bytestream.
+ */
+uint8_t *img4_decompress_bvx2_decrypted_buffer (char *in, size_t insize)
+{
+	/**
+	 * 	I've taken this code from lzfse/lzfse_main.c. It calcs the
+	 * 	"correct" size for the decompressed buffer, then calls the
+	 * 	lzfse_decode_buffer () function.
+	 * 
+	 * 	There is a problem that the result of `out` is always different,
+	 * 	this can be observed by checking the sha1 of the resulting file
+	 * 	or, in lldb, running `fr v` and observing the difference between
+	 * 	two seperate runs on the same file.
+	 * 
+	 * 	However, when loading the resulting file into IDA64, using
+	 * 	https://github.com/argp/iBoot64helper, an iBoot file is always
+	 * 	recognised, and the file size is the same, so the difference
+	 * 	must be a single byte.
+	 * 
+	 */
+	int op = -1;
+	size_t out_allocated = (op == 0) ? insize : (4 * insize);
+	size_t out_size = 0;
 
-		Here, I cannot get that tag either before or after i decrypt the image, so i am unsure how to
-		calculate the size of the decompress image to write back.
+	uint8_t *out = (uint8_t *) malloc (out_allocated);
 
-		Terminal output running lzfse manually on the decrypted payload:
+	out_size = lzfse_decode_buffer (out, out_allocated, (uint8_t *) in, insize, NULL);
 
-		20:29 h3adsh0tzz@h3adsh0tzzs-iMac.local ~/Sources/img4helper/build% lzfse -decode -i outfile3.raw -o iBoot.decrypted.decompressed.arm64 -v                                                                                                                                         (git)-[master]
-			LZFSE decode
-			Input: outfile3.raw
-			Output: iBoot.decrypted.decompressed.arm64
-			Input size: 133173248 B
-			Output size: 1481600 B
-			Compression ratio: 0.011
-			Speed: 2.81 ns/B, 339.74 MB/s
-			
-		20:30 h3adsh0tzz@h3adsh0tzzs-iMac.local ~/Sources/img4helper/build% strings iBoot.decrypted.decompressed.arm64| grep iBoot                                                                                                                                                         (git)-[master]
-			iBoot for d22, Copyright 2007-2019, Apple Inc.
-			iBoot-5540.0.129
-			VVVV = vertical offset in pixels (0=no offset=iBoot default behavior)
-			failed to execute upgrade command from iBoot
-			DCS Init Lib Built for: iBoot SOC
-			iBoot
-			iBoot-5540.0.129
-			chosen/iBoot
-			[iBoot Panic]: 
-			iBootIm
-	
-	tag = asn1ElementAtIndex (ret, 3) + 1;
-	len = asn1Len (tag);
-	
-	data = tag + len.sizeBytes;
-
-	char *ct = ret + len.dataLen;
-	char *ust = asn1ElementAtIndex (ct, 1);
-
-	size_t dst_size = asn1GetNumberFromTag ((asn1Tag_t *) ust);
-	
-	size_t s = lzfse_decode_buffer ((uint8_t *) ret, dst_size,
-									(uint8_t *) ret, len.dataLen,
-									NULL);
-
-	//size_t uncomp_size = lzfse_decode_buffer ((uint8_t *) ret, )*/
-
-	return ret;
+	return out;
 }
 
 
@@ -636,9 +667,10 @@ char *img4_decrypt_bytes (image4_t *img, char *_key)
  * 		char *infile		-		Path of input image
  * 		char *outfile 		-		Path of output raw file
  * 		char *ivkey			-		Encryption key
+ * 		int   dont_decomp	-		Don't decompress the decrypted file
  * 	
  */
-void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
+void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decomp)
 {
 	/* Load the image */
 	image4_t *image = img4_read_image_from_path (infile);
@@ -696,9 +728,20 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey)
 		/* Complete the first log */
 		g_print (" encrypted\n");
 
+		/* Ensure an ivkey was set */
+		if (!ivkey) {
+			g_print ("[*] Error: No decryption key was specified.\n");
+			exit (0);
+		}
+
 		/* Decrypt the payload */
-		g_print ("[*] Decrypting with ivkey: 1ef67798a0c53116a47145dfff0aac609a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f\n");
-		newimage->buf = img4_decrypt_bytes (image, "1ef67798a0c53116a47145dfff0aac609a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f");
+		/**
+		 * 	DEBUG:
+		 * 		This key is valid for iBoot-5540.0.129 device D22ap 
+		 * 	1ef67798a0c53116a47145dfff0aac609a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f
+		 */
+		g_print ("[*] Attempting to decrypting with ivkey: %s\n", ivkey);
+		newimage->buf = img4_decrypt_bytes (image, ivkey, dont_decomp);
 
 	} else {
 

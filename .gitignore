@@ -62,4 +62,4 @@ build/
 .vscode/
 
 # Ignore the ipsw test folder
-test/ipsw
+test/
