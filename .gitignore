@@ -52,14 +52,12 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# Meson build directory
+# Meson build directory and test directory
 build/
+test/
 
 # Fuck off DS Store
 .DS_Store
 
 # VSCode config
 .vscode/
-
-# Ignore the ipsw test folder
-test/

@@ -93,6 +93,22 @@ typedef struct image4_t {
 
 
 /**
+ * 	Compression header for lzss. This code was from Jonathan Levin's
+ * 	Joker tool, along with some more code in img4_decompress_lzss.
+ * 
+ * 	There are vars for the signature/magic, unknown data that isn't
+ * 	required, and the uncompressed and compressed sizes.
+ */
+struct compHeader {
+	char		sig[8];
+	uint32_t	unknown;
+	uint32_t	uncompressedSize;
+	uint32_t	compressedSize;
+	uint32_t 	unknown1;
+};
+
+
+/**
  * 	Functions for handling and manipulating image4_t's
  * 
  */
@@ -156,7 +172,6 @@ image4_t *img4_decompress_bvx2 (image4_t *img);
 image4_t *img4_decompress_lzss (image4_t *img);
 
 uint8_t *img4_decompress_bvx2_decrypted_buffer (char *in, size_t insize);
-
 char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp);
 
 

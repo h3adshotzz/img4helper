@@ -470,9 +470,9 @@ Image4CompressionType img4_check_compression_type (char *buf)
 /**
  * 	img4_decompress_bvx2 ()
  * 
- * 	Takes the given image4_t and verifies that it is an im4p, and not
- * 	an entire img4 or another type of Image4. The decompression is
- * 	run, a new image4_t is constructed and returned.
+ * 	Takes the given image4_t and decompresses it using bvx2. The
+ * 	result is written back to an image and returned. Assumes that
+ * 	the images compression type has already been checked and verified.
  * 
  * 	Args:
  * 		image4_t *img		-	Compressed Image4 file
@@ -513,6 +513,85 @@ image4_t *img4_decompress_bvx2 (image4_t *img)
 
 	img->size = dst_size;
 	
+	return img;
+
+}
+
+
+/**
+ * 	img4_decompress_lzss ()
+ * 
+ * 	Takes a given image4_t and decompresses it using lzss. The
+ * 	result is written back to an image and returned. Assumes that
+ * 	the image compression type has already been checked and verified.
+ * 
+ * 	Args:
+ * 		image4_t *img		-	Compressed Image4 file.
+ * 	
+ * 	Returns:
+ * 		image4_t			-	Decompressed Image4 file.
+ * 
+ */
+image4_t *img4_decompress_lzss (image4_t *img)
+{
+
+	/**
+	 * 	Create a new compheader with the img buffer. This allows us to
+	 * 	access the different properties of the buffer.
+	 */
+	struct compHeader *compHeader = strstr (img->buf, "complzss");
+
+	/* Print some details about the size of the buffer */
+	g_print ("[*] Compressed size: %lu, Uncompressed Size: %lu\n", compHeader->compressedSize, compHeader->uncompressedSize);
+
+	/**
+	 * 	TODO: Add KPP and other useful detections as functions in, say, kernel.c or darwin.c
+	 * 
+	 * 	This is some code used by Morpheus for doing that very thing:
+	 * 
+	 * 	1	int sig[2] = { 0xfeedfacf, 0x0100000c };
+	 *  2
+	 * 	3	char *found = NULL;
+	 *  4	if ((found = memmem(buffer + 0x2000, buf_size, "__IMAGEEND", 8))) {
+	 * 	5		char *kpp = memmem (found - 0x1000, 0x1000, sig, 4);
+	 * 	6		if (kpp) g_print ("kpp is at: %slld (0x%x)\n", kpp -buffer, kpp-buffer);
+	 * 	7	}
+	 * 
+	 */
+
+	/* Allocate some space for the decompressed buffer */
+	char *decomp = malloc (ntohl (compHeader->uncompressedSize));
+
+	/* Look for 0xfeedfacf */
+	int sig = 0xfeedfacf;
+	char *feed = memmem (img->buf + 64, 1024, &sig, 3);
+
+	/* Check if there was a memmem result */
+	if (!feed) {
+		g_print ("[*] Error: Could not find Kernel 0xfeedfacf\n");
+		exit (0);
+	} else {
+		g_print ("[*] Found Kernel 0xfeedfacf: %d\n", feed -img->buf);
+	}
+
+	/* Try to decompress */
+	--feed;
+	int rc = decompress_lzss ((uint8_t *) decomp, (uint8_t *) feed, ntohl (compHeader->compressedSize));
+
+	/**
+	 * 	Check if 'rc' is the same as the uncompressed size in the header.
+	 * 	This will tell if the decompression was successful/
+	 */
+	if (rc != ntohl (compHeader->uncompressedSize)) {
+		g_print ("[*] Error: Expected %d bytes, but got %d bytes. Exiting\n", ntohl (compHeader->uncompressedSize), rc);
+		exit (0);
+	}
+
+	/* Re-assign the img's size and buf vals */
+	img->size = compHeader->uncompressedSize;
+	img->buf = decomp;
+
+	/* Return the decompressed image */
 	return img;
 
 }
@@ -606,6 +685,13 @@ char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 	if (!strncmp (ret, "bvx2", 4) && !dont_decomp) {
 		g_print (" bvx2.\n");
 		return (char *) img4_decompress_bvx2_decrypted_buffer (ret, len.dataLen);
+	} else if (!strncmp (ret, "complzss", 8) && !dont_decomp) {
+		g_print (" lzss\n");
+
+		img->buf = ret;
+		img->size = len.dataLen;
+
+		return (char *) img4_decompress_lzss (img);
 	} else {
 		g_print (" none.\n");
 		return ret;
@@ -743,18 +829,19 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 		g_print ("[*] Attempting to decrypting with ivkey: %s\n", ivkey);
 		newimage->buf = img4_decrypt_bytes (image, ivkey, dont_decomp);
 
-	} else {
+	} else if (comp == IMG4_COMP_LZSS) {
 
-		/**
-		 * 	TODO List:
-		 * 		- Check if the file file is already decompressed (strncmp __TEXT)
-		 * 		- Decompress lzss
-		 * 		- Decrypt then decompress
-		 * 		- Comment this and img4_decompress_bvx2 ()
-		 */
+		/* Complete the first log */
+		g_print (" lzss\n");
+
+		/* Create the new image with the decompressed payload */
+		newimage = img4_decompress_lzss (image);
+
+	} else {
 
 		g_print ("\n[*] Cannot handle compression type. Exiting...\n");
 		exit (0);
+
 	}
 
 	/* Print that we are now writing to the file */
