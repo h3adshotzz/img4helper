@@ -19,6 +19,7 @@
 
 #include <glib.h>
 #include "img4.h"
+#include "darwin.h"
 
 
 /**
@@ -40,6 +41,8 @@ static char *ivkey = 0;
 static char *outfile = 0;
 static int *dont_decomp = 0;
 
+static char *kernel = 0;
+
 static int version = 0;
 
 static GOptionEntry entries [] =
@@ -58,6 +61,9 @@ static GOptionEntry entries [] =
 	{ "outfile", 'o', 0, G_OPTION_ARG_STRING, &outfile, "Specify a file to write output too (Default outfile.raw, use with --extract", NULL },
 	{ "dont-decompress", 0, 0, G_OPTION_ARG_NONE, &dont_decomp, "Do not decompress a given encrypted boot file (iBoot, LLB, etc)", NULL },
 
+	/* Analysis */
+	{ "kernel", 'k', 0, G_OPTION_ARG_STRING, &kernel, "Analyse a kernelcache (Can be compressed, decrypt if necessary with -k)", NULL },
+
 	/* Check build info */
 	{ "version", 'v', 0, G_OPTION_ARG_NONE, &version, "View build info.", NULL },
 
@@ -72,7 +78,7 @@ static GOptionEntry entries [] =
  */
 void version_tag ()
 {
-	
+
 }
 
 
@@ -130,6 +136,15 @@ int main (int argc, char* argv[])
 
 		/* Call the im4p extract function */
 		img4_extract_im4p (extract, outfile, ivkey, dont_decomp);
+
+		exit (1);
+	}
+
+	/* Check if we are analysing a kernelcache */
+	if (kernel) {
+
+		g_print ("[WARNING] This is my dodgy testing code, it probably won't work too well\n");
+		darwin_helper_test (kernel);
 
 		exit (1);
 	}

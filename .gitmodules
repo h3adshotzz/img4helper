@@ -1,0 +1,3 @@
+[submodule "libhelper"]
+	path = libhelper
+	url = https://github.com/h3adshotzz/libhelper

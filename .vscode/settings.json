@@ -17,6 +17,8 @@
         "string": "c",
         "unordered_map": "c",
         "utility": "c",
-        "vector": "c"
+        "vector": "c",
+        "machine.h": "c",
+        "stdint.h": "c"
     }
 }
