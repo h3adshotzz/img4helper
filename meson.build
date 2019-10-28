@@ -46,4 +46,5 @@ cc_dep = dependency('cryptokit')
 #
 #	Sub directories
 #
+subdir('libhelper/src')
 subdir('src')

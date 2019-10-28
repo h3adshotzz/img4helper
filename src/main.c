@@ -21,6 +21,9 @@
 #include "img4.h"
 #include "darwin.h"
 
+/* TEST */
+#include <libhelper.h>
+
 
 /**
  * 	Main loop
@@ -108,6 +111,9 @@ int main (int argc, char* argv[])
 	g_print ("----------------------------------------\n");
 	g_print ("img4helper %s (c) @h3adsh0tzz 2019\n", VERSION_STRING);
 	g_print ("----------------------------------------\n\n");
+
+	/* TEST */
+	libhelper_test();
 
 
 	/* Check if we are printing data */

@@ -14,5 +14,4 @@ deps = [glib_dep, lzfse_dep, cc_dep]
 #
 #	Binary
 #
-img4helper = executable('img4helper', sources, dependencies: deps)
-
+img4helper = executable('img4helper', sources, dependencies: deps, link_with: libhelper, include_directories : incdir)
