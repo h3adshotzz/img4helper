@@ -110,11 +110,8 @@ int main (int argc, char* argv[])
 	/* Print banner */
 	g_print ("----------------------------------------\n");
 	g_print ("img4helper %s (c) @h3adsh0tzz 2019\n", VERSION_STRING);
+	g_print ("\tBuilt with %s\n", libhelper_version_string ());
 	g_print ("----------------------------------------\n\n");
-
-	/* TEST */
-	libhelper_test();
-
 
 	/* Check if we are printing data */
 	if (print_all) {
