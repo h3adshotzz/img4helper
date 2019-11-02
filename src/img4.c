@@ -857,7 +857,6 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 }
 
 
-
 //////////////////////////////////////////////////////////////////
 /*				    Image Printing Funcs						*/
 //////////////////////////////////////////////////////////////////
@@ -961,4 +960,38 @@ void img4_print_with_type (Image4Type print_type, char *filename)
 
 	}
 
+}
+
+
+
+
+char *im4p_extract_silent (char *fn)
+{
+	/* Check the given filename is not NULL */
+	if (!fn) {
+		g_print ("[Error] No filename given\n");
+		exit(0);
+	}
+
+	/* Create an image4_t for the filename */
+	image4_t *image = img4_read_image_from_path (fn);
+	char *magic = img4_string_for_image_type (image->type);
+
+	/* Print some info contained in the file header */
+	g_print ("Loaded: \t%s\n", fn);
+	g_print ("Image4 Type: \t%s\n", magic);
+
+	/* Extract data elements */
+	char *tag = asn1ElementAtIndex (image->buf, 3) + 1;
+	asn1ElemLen_t len = asn1Len (tag);
+	char *data = tag + len.sizeBytes;
+
+	/* Write to a temporary file */
+	char *ret_name = "im4p.raw.tmp";
+
+	FILE *o = fopen (ret_name, "wb");
+	fwrite (data, len.dataLen, 1, o);
+	fclose (o);
+
+	return ret_name;
 }

@@ -220,4 +220,7 @@ void img4_handle_im4r (char *buf, int tabs);
 void img4_print_with_type (Image4Type type, char *filename);
 
 
+// test
+char *im4p_extract_silent (char *fn);
+
 #endif /* IMG4_H */

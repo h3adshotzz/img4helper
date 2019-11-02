@@ -20,6 +20,8 @@
         "vector": "c",
         "machine.h": "c",
         "stdint.h": "c",
-        "libhelper.h": "c"
+        "libhelper.h": "c",
+        "__locale": "c",
+        "__string": "c"
     }
 }

@@ -20,6 +20,7 @@
 #include <glib.h>
 #include "img4.h"
 #include "darwin.h"
+#include "devtree.h"
 
 /* TEST */
 #include <libhelper.h>
@@ -42,9 +43,12 @@ static char *extract = 0;
 
 static char *ivkey = 0;
 static char *outfile = 0;
-static int *dont_decomp = 0;
+static int dont_decomp = 0;
 
 static char *kernel = 0;
+
+static char *devtree = 0;
+static int devtree_children = 0;
 
 static int version = 0;
 
@@ -66,6 +70,9 @@ static GOptionEntry entries [] =
 
 	/* Analysis */
 	{ "kernel", 'k', 0, G_OPTION_ARG_STRING, &kernel, "Analyse a kernelcache (Can be compressed, decrypt if necessary with -k)", NULL },
+	
+	{ "devicetree", 'd', 0, G_OPTION_ARG_STRING, &devtree, "Dump a given Device Tree (Must be decrypted).", NULL },
+	{ "print-children", 0, 0, G_OPTION_ARG_NONE, &devtree_children, "Print Device Tree Properties Children.", NULL },
 
 	/* Check build info */
 	{ "version", 'v', 0, G_OPTION_ARG_NONE, &version, "View build info.", NULL },
@@ -149,6 +156,12 @@ int main (int argc, char* argv[])
 		g_print ("[WARNING] This is my dodgy testing code, it probably won't work too well\n");
 		darwin_helper_test (kernel);
 
+		exit (1);
+	}
+
+	/* Check if we are analysing a device tree */
+	if (devtree) {
+		dt_dump (devtree, devtree_children);
 		exit (1);
 	}
 
