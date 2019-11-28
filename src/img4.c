@@ -568,8 +568,16 @@ image4_t *img4_decompress_lzss (image4_t *img)
 
 	/* Check if there was a memmem result */
 	if (!feed) {
-		g_print ("[*] Error: Could not find Kernel 0xfeedfacf\n");
-		exit (0);
+		g_print ("[*] Error: Could not find Kernel 0xfeedfacf, Mach-O possibly 32bit?\n");
+
+		sig = 0xfeedface;
+		feed = memmem (img->buf + 64, 1024, &sig, 3);
+
+		if (!feed) {
+			g_print ("[*] Error: Could not find Kernel 0xfeedface (32bit)\n");
+			exit (0);
+		}
+
 	} else {
 		g_print ("[*] Found Kernel 0xfeedfacf: %d\n", feed -img->buf);
 	}
