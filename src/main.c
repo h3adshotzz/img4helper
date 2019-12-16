@@ -91,7 +91,23 @@ static GOptionEntry entries [] =
  */
 void version_tag ()
 {
+	printf ("h3adsh0tzz Img4Helper Version %s (%s)\n", IMG4HELPER_VERSION_NUMBER, LIBHELPER_VERSION_LONG);
+    printf ("\tBuild Time:\t\t" __TIMESTAMP__ "\n");
 
+#ifdef __APPLE__
+    printf ("\tDefault Target:\t\tdarwin-");
+#else
+    printf ("\tDefault Target:\t\tlinux-");
+#endif
+
+#ifdef __x86_64__
+    printf ("x86_64\n");
+#elif __arm__
+    printf ("arm64\n");
+#endif
+
+    printf ("\tBuild Type: \t\t%s\n", IMG4HELPER_VERSION_TAG);
+    printf ("\tBuilt With: \t\t%s\n", LIBHELPER_VERSION_LONG);
 }
 
 
@@ -118,15 +134,14 @@ int main (int argc, char* argv[])
 	}
 
 	/* Print banner */
-	g_print ("----------------------------------------\n");
-	g_print ("img4helper %s (c) @h3adsh0tzz 2019\n", VERSION_STRING);
-	//g_print ("\tBuilt with %s\n", libhelper_version_string ());
-	g_print ("----------------------------------------\n\n");
+	printf ("----------------------------------------\n");
+	printf ("img4helper %s~%s (c) @h3adsh0tzz 2019\n", IMG4HELPER_VERSION_NUMBER, IMG4HELPER_VERSION_TAG);
+	//printf ("\tBuilt with %s\n", libhelper_version_string ());
+	printf ("----------------------------------------\n\n");
 
 	/* Check if we are printing version info */
 	if (version) {
-		debugf ("%s\n", libhelper_version_string());
-		debugf ("img4helper %s\n", VERSION_STRING);
+		version_tag ();
 		exit (0);
 	}
 
@@ -150,7 +165,7 @@ int main (int argc, char* argv[])
 
 		/* Check that an outfile name was specified, if not set out and notify */
 		if (!outfile) {
-			g_print ("[Error] No outfile specified. Will extract payload to outfile.raw\n");
+			printf ("[Error] No outfile specified. Will extract payload to outfile.raw\n");
 			outfile = "outfile.raw";
 		}
 
@@ -170,7 +185,7 @@ int main (int argc, char* argv[])
 	/* Check if we are analysing a kernelcache */
 	if (kernel) {
 
-		g_print ("[WARNING] This is my dodgy testing code, it probably won't work too well\n");
+		printf ("[WARNING] This is my dodgy testing code, it probably won't work too well\n");
 		darwin_helper_test (kernel);
 
 		exit (1);
@@ -183,7 +198,7 @@ int main (int argc, char* argv[])
 	}
 
 	/* We can only get to this point if nothing is set */
-	g_print ("%s\n", g_option_context_get_help (context, TRUE, NULL));
+	printf ("%s\n", g_option_context_get_help (context, TRUE, NULL));
 
 	return 0;
 }

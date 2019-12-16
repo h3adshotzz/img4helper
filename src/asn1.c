@@ -70,7 +70,7 @@ asn1ElemLen_t asn1Len (const char *buf)
 uint64_t asn1GetNumberFromTag(asn1Tag_t *tag)
 {
     if (tag->tagNumber != kASN1TagINTEGER) {
-        g_print ("[Error] Not an integer\n");
+        printf ("[Error] Not an integer\n");
         exit(1);
     }
 
@@ -94,7 +94,7 @@ uint64_t asn1GetNumberFromTag(asn1Tag_t *tag)
 size_t asn1GetPrivateTagnum (asn1Tag_t *tag, size_t *sizebytes)
 {
 	if (*(unsigned char *) tag != 0xff) {
-		g_print ("[Error] Not a private TAG 0x%02x\n", *(unsigned int *) tag);
+		printf ("[Error] Not a private TAG 0x%02x\n", *(unsigned int *) tag);
 		exit(1);
 	}
 
@@ -133,7 +133,7 @@ char *asn1GetString (char *buf, char **outstring, size_t *strlen)
 	asn1Tag_t *tag = (asn1Tag_t *)buf;
 
 	if (!(tag->tagNumber | kASN1TagIA5String)) {
-		g_print("[Error] not a string\n");
+		printf("[Error] not a string\n");
 		return 0;
 	}
 
@@ -235,13 +235,13 @@ void asn1PrintIA5String (asn1Tag_t *str, char *padding)
 {
     // Check that the given tag is a IA5String
     if (str->tagNumber != kASN1TagIA5String) {
-        g_print ("%s[Error] Value not an IA5String\n", padding);
+        printf ("%s[Error] Value not an IA5String\n", padding);
         exit(1);
     }
 
     // Get the length of the string and print
     asn1ElemLen_t len = asn1Len ((char *) ++str);
-    g_print ("%s%.*s", padding, (int) len.dataLen, ((char *) str) + len.sizeBytes);
+    printf ("%s%.*s", padding, (int) len.dataLen, ((char *) str) + len.sizeBytes);
 }
 
 
@@ -258,15 +258,15 @@ void asn1PrintOctet (asn1Tag_t *str, char *padding)
 {
     // Check the tag is actually an OCTET value
     if (str->tagNumber != kASN1TagOCTET) {
-        g_print ("%s[Error] Not an OCTET string\n", padding);
+        printf ("%s[Error] Not an OCTET string\n", padding);
         exit(1);
     }
 
     // Tihmstar magic
-    g_print ("%s", padding);
+    printf ("%s", padding);
     asn1ElemLen_t len = asn1Len ((char *) str + 1);
     unsigned char *string = (unsigned char *) str + len.sizeBytes +1;
-    while (len.dataLen--) g_print ("%02x", *string++);
+    while (len.dataLen--) printf ("%02x", *string++);
 }
 
 
@@ -283,7 +283,7 @@ void asn1PrintNumber (asn1Tag_t *str, char *padding)
 {
     // Check if the tag is a number
     if (str->tagNumber != kASN1TagINTEGER) {
-        g_print ("%s[Error] Tag is not an Integer\n", padding);
+        printf ("%s[Error] Tag is not an Integer\n", padding);
         return;
     }
 
@@ -294,7 +294,7 @@ void asn1PrintNumber (asn1Tag_t *str, char *padding)
         num *= 0x100;
         num += *(unsigned char*) ++str;
     }
-    g_print ("%s%u", padding, num);
+    printf ("%s%u", padding, num);
 }
 
 
@@ -313,7 +313,7 @@ void asn1PrintPrivtag (size_t privTag, char *padding)
     int len = 0;
     while (*ptag) ptag++, len++;
 
-    g_print ("%s", padding);
+    printf ("%s", padding);
     while (len--) putchar(*--ptag);
 }
 
@@ -347,15 +347,15 @@ void asn1PrintValue (asn1Tag_t *tag, char *padding)
         }
 
         if (sizeof (uint64_t) == 8) {
-            g_print ("%llu", pnum);
+            printf ("%llu", pnum);
         } else {
-            g_print (" (hex)");
+            printf (" (hex)");
         }
 
     } else if (tag->tagNumber == kASN1TagBOOLEAN) {
-        g_print ("%s", (*(char *) tag + 2 == 0) ? "false" : "true");
+        printf ("%s", (*(char *) tag + 2 == 0) ? "false" : "true");
     } else {
-        g_print ("%s[Error] Can't print tag of unknown type %02x\n", padding, *(unsigned char *) tag);
+        printf ("%s[Error] Can't print tag of unknown type %02x\n", padding, *(unsigned char *) tag);
     }
 }
 
@@ -380,17 +380,17 @@ void asn1PrintKeyValue (char *buf, char *padding)
         // Check the amount of elements in the buffer is as it should be
         int i;
         if ((i = asn1ElementsInObject(buf)) != 2) {
-            g_print ("%s[Error] Expecting two elements, found %d\n", padding, i);
+            printf ("%s[Error] Expecting two elements, found %d\n", padding, i);
             exit(1);
         }
 
         // Print the IA5String
         asn1PrintIA5String ((asn1Tag_t *) asn1ElementAtIndex (buf, 0), padding);
-        g_print (": ");
+        printf (": ");
 
         // This should now print the value of the key.
         asn1PrintKeyValue (asn1ElementAtIndex(buf, 1), padding);
-        g_print ("\n");
+        printf ("\n");
 
         return;
 
@@ -404,7 +404,7 @@ void asn1PrintKeyValue (char *buf, char *padding)
 
 
     // If we got here, the buffer/tag is not a Sequence so must be a Set.
-    g_print ("------------------------------\n");
+    printf ("------------------------------\n");
 
     // Go through any tags in the set.
     for (int i = 0; i < asn1ElementsInObject(buf); i++) {
@@ -415,7 +415,7 @@ void asn1PrintKeyValue (char *buf, char *padding)
         
         // Print the tag name
         asn1PrintPrivtag (asn1GetPrivateTagnum ((asn1Tag_t *) elem, &sb), padding);
-        g_print (": ");
+        printf (": ");
 
         // Calculate where the value is
         elem += sb;
@@ -441,13 +441,13 @@ int getSequenceName (const char *buf, char **name, size_t *namelen)
 	int err = 0;
 
 	if (((asn1Tag_t *) buf)->tagNumber != kASN1TagSEQUENCE) {
-		g_print("not a sequence\n");
+		printf("not a sequence\n");
 		return err;
 	}
 
 	int elems = asn1ElementsInObject(buf);
 	if (!elems) {
-		g_print("no elements in sequence\n");
+		printf("no elements in sequence\n");
 		return err;
 	}
 
@@ -478,7 +478,7 @@ char *getImageFileType (char *buf)
 	} else if (!strncmp("IM4R", magic, l)) {
 		return "IM4R";
 	} else {
-		g_print ("[Error] Unexpected tag, got \"%s\"\n", magic);
+		printf ("[Error] Unexpected tag, got \"%s\"\n", magic);
 		exit(1);
 	}
 }
@@ -495,12 +495,12 @@ char *getIM4PFromIMG4 (char *buf)
 	getSequenceName (buf, &magic, &l);
 
 	if (strncmp("IMG4", magic, l)) {
-		g_print ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
+		printf ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
 		exit(1);
 	}
 
 	if (asn1ElementsInObject (buf) < 2) {
-		g_print ("[Error] Not enough elements in SEQUENCE\n");
+		printf ("[Error] Not enough elements in SEQUENCE\n");
 		exit(1);
 	}
 
@@ -511,7 +511,7 @@ char *getIM4PFromIMG4 (char *buf)
 	if (strncmp("IM4P", magic, 4) == 0) {
 		return ret;
 	} else {
-		g_print ("[Error] Expected \"IM4P\", got \"%s\"\n", magic);
+		printf ("[Error] Expected \"IM4P\", got \"%s\"\n", magic);
 		exit(1);
 	}
 
@@ -529,18 +529,18 @@ char *getIM4MFromIMG4 (char *buf)
 	getSequenceName (buf, &magic, &l);
 
 	if (strncmp("IMG4", magic, l)) {
-		g_print ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
+		printf ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
 		exit(1);
 	}
 
 	if (asn1ElementsInObject (buf) < 3) {
-		g_print ("[Error] Not enough elements in SEQUENCE\n");
+		printf ("[Error] Not enough elements in SEQUENCE\n");
 		exit(1);
 	}
 
 	char *ret = (char*) asn1ElementAtIndex (buf, 2);
     if (((asn1Tag_t *) ret)->tagClass != kASN1TagClassContextSpecific) {
-		g_print ("[Error] unexpected Tag 0x%02x, expected SET\n", *(unsigned char*) ret);
+		printf ("[Error] unexpected Tag 0x%02x, expected SET\n", *(unsigned char*) ret);
 		exit(1);
 	}
 
@@ -550,7 +550,7 @@ char *getIM4MFromIMG4 (char *buf)
 	if (strncmp("IM4M", magic, 4) == 0) {
 		return ret;
 	} else {
-		g_print ("[Error] Expected \"IM4P\", got \"%s\"\n", magic);
+		printf ("[Error] Expected \"IM4P\", got \"%s\"\n", magic);
 		exit(1);
 	}
 }
@@ -567,18 +567,18 @@ char *getIM4RFromIMG4 (char *buf)
 	getSequenceName (buf, &magic, &l);
 
 	if (strncmp("IMG4", magic, l)) {
-		g_print ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
+		printf ("[Error] Expected \"IMG4\", got \"%s\"\n", magic);
 		exit(1);
 	}
 
 	if (asn1ElementsInObject (buf) < 4) {
-		g_print ("[Error] Not enough elements in SEQUENCE\n");
+		printf ("[Error] Not enough elements in SEQUENCE\n");
 		exit(1);
 	}
 
 	char *ret = (char*) asn1ElementAtIndex (buf, 3);
     if (((asn1Tag_t *) ret)->tagClass != kASN1TagClassContextSpecific) {
-		g_print ("[Error] unexpected Tag 0x%02x, expected SET\n", *(unsigned char*) ret);
+		printf ("[Error] unexpected Tag 0x%02x, expected SET\n", *(unsigned char*) ret);
 		exit(1);
 	}
 
@@ -588,7 +588,7 @@ char *getIM4RFromIMG4 (char *buf)
 	if (strncmp("IM4R", magic, 4) == 0) {
 		return ret;
 	} else {
-		g_print ("[Error] Expected \"IM4R\", got \"%s\"\n", magic);
+		printf ("[Error] Expected \"IM4R\", got \"%s\"\n", magic);
 		exit(1);
 	}
 }
@@ -624,14 +624,14 @@ void img4PrintKeybag (char *octet, char *padding)
 {
 	// Ensure the OCTET has a value
 	if (octet == NULL) {
-		g_print ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
+		printf ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
 		exit(1);
 	}
 	
 	// Check if the octet is a kASN1TagOCTET
 	if (((asn1Tag_t *) octet)->tagNumber != kASN1TagOCTET) {
-		//g_print ("%s[Error] not an OCTET\n", padding);
-		g_print ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
+		//printf ("%s[Error] not an OCTET\n", padding);
+		printf ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
 		exit(1);
 	}
 
@@ -651,15 +651,15 @@ void img4PrintKeybag (char *octet, char *padding)
 		if (elems--) {
 			asn1Tag_t *num = (asn1Tag_t *) asn1ElementAtIndex (s, 0);
 			if (num->tagNumber != kASN1TagINTEGER) {
-				g_print ("%s[Warning] Skipping unexpected tag\n", padding);
+				printf ("%s[Warning] Skipping unexpected tag\n", padding);
 			} else {
 				if (i == 0) {
-					g_print ("%sKBAG Production [1]:\n", padding);
+					printf ("%sKBAG Production [1]:\n", padding);
 				} else if (i == 1) {
-					g_print ("%sKBAG Development [2]:\n", padding);
+					printf ("%sKBAG Development [2]:\n", padding);
 				} else {
 					char n = *(char *)(num + 2);
-					g_print ("%sKBAG Unknown: [%d]:\n", padding, n);
+					printf ("%sKBAG Unknown: [%d]:\n", padding, n);
 				}
 			}
 		}
@@ -687,14 +687,14 @@ void img4PrintManifestBody (const char *buf, char *padding)
 
 	// Check that the magic contains MANB
 	if (strncmp("MANB", magic, l)) {
-		g_print ("[Error] Expected \"MANB\", got \"%s\"\n", magic);
+		printf ("[Error] Expected \"MANB\", got \"%s\"\n", magic);
 		exit(1);
 	}
 
 	// Count the number of elements and make sure it is at least 2
 	int manbElmCount = asn1ElementsInObject (buf);
 	if (manbElmCount < 2) {
-		g_print ("[Error] Not enough elements in MANB\n");
+		printf ("[Error] Not enough elements in MANB\n");
 		exit(1);
 	}
 
@@ -711,14 +711,14 @@ void img4PrintManifestBody (const char *buf, char *padding)
 		if (*(char *) manbElm == kASN1TagPrivate) {
 
 			size_t sb;
-			g_print ("%s", padding);
+			printf ("%s", padding);
 			size_t privTag = asn1GetPrivateTagnum(manbElm, &sb);
 			char *ptag = (char *) &privTag;
 			int len = 0;
 			while (*ptag) ptag++, len++;
 			while (len--) putchar(*--ptag);
 
-			g_print(": ");
+			printf(": ");
 			manbElm += sb;
 
 		} else {

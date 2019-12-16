@@ -3,6 +3,7 @@
 
 #define DEBUG 0
 
-#define VERSION_STRING "v1.0~Beta3"
+#define IMG4HELPER_VERSION_NUMBER    "1.0.0"
+#define IMG4HELPER_VERSION_TAG       "Beta4"
 
 #endif

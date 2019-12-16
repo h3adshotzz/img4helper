@@ -122,12 +122,12 @@ void dt_dump (char *path, int print_children)
 
     int fres = remove (fn);
     if (fres) {
-        g_print ("[*] Warning: Temporary file 'im4p.raw.tmp' not deleted.\n");
+        printf ("[*] Warning: Temporary file 'im4p.raw.tmp' not deleted.\n");
     }
 
 
     dt_node_t *dtn = (dt_node_t *) data;
-    g_print ("Loaded a Device Tree with %d Properties and %d Children\n", dtn->prop_count, dtn->child_count);
+    printf ("Loaded a Device Tree with %d Properties and %d Children\n", dtn->prop_count, dtn->child_count);
 
     dt_dump_node (dtn, 1, print_children);
 

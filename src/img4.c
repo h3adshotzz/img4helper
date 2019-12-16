@@ -46,7 +46,7 @@ image4_t *img4_read_image_from_path (char *path)
 	/* The path should have already been verified by the caller */
 	FILE *f = fopen (path, "rb");
 	if (!f) {
-		g_print ("[Error] Could not read file!\n");
+		printf ("[Error] Could not read file!\n");
 		exit(0);
 	}
 
@@ -65,7 +65,7 @@ image4_t *img4_read_image_from_path (char *path)
 	/* Calculate the image file type */
 	char *magic = getImageFileType (image->buf);
 	if (!magic) {
-		g_print ("[Error] Input file could not be recognised as an Image4\n");
+		printf ("[Error] Input file could not be recognised as an Image4\n");
 		exit (0);
 	}
 
@@ -79,7 +79,7 @@ image4_t *img4_read_image_from_path (char *path)
 	} else if (!strncmp (magic, "IM4R", 4)) {
 		image->type = IMG4_TYPE_IM4R;
 	} else {
-		g_print ("[Error] Input file could not be recognised as an Image4\n");
+		printf ("[Error] Input file could not be recognised as an Image4\n");
 		exit (0);
 	}
 
@@ -138,7 +138,7 @@ char *img4_get_component_name (char *buf)
 	getSequenceName(buf, &magic, &l);
 
 	if (!strncmp (magic, "img4", 4)) {
-		g_print ("magic is img4\n");
+		printf ("magic is img4\n");
 		buf = getIM4PFromIMG4 (buf);
 	}
 
@@ -214,7 +214,7 @@ void img4_handle_im4p (char *buf, int tabs)
 	}
 
 	/* Print the IM4P banner */
-	g_print ("  IM4P: ------\n");
+	printf ("  IM4P: ------\n");
 
 	/* We can't really use image4_t here, so we have to calculate everything */
 	char *magic;
@@ -223,7 +223,7 @@ void img4_handle_im4p (char *buf, int tabs)
 
 	/* Verify that we have been given an im4p buffer */
 	if (strncmp("IM4P", magic, l)) {
-		g_print ("%s[Error] Expected \"IM4P\", got \"%s\"\n", padding, magic);
+		printf ("%s[Error] Expected \"IM4P\", got \"%s\"\n", padding, magic);
 	}
 
 	// TODO: counting more elemnts than it should. Images without kbags are still being parsed
@@ -242,9 +242,9 @@ void img4_handle_im4p (char *buf, int tabs)
 		/* Check the data size and print it. */
 		asn1Tag_t *data = (asn1Tag_t *) asn1ElementAtIndex(buf, 3);
 		if (data->tagNumber != kASN1TagOCTET) {
-			g_print ("%s[Warning] Skipped an unexpected tag where an OCTETSTRING was expected\n", padding);
+			printf ("%s[Warning] Skipped an unexpected tag where an OCTETSTRING was expected\n", padding);
 		} else {
-			g_print ("%sSize: 0x%08zx\n\n", padding, asn1Len((char *) data + 1).dataLen);
+			printf ("%sSize: 0x%08zx\n\n", padding, asn1Len((char *) data + 1).dataLen);
 		}
 	}
 
@@ -255,7 +255,7 @@ void img4_handle_im4p (char *buf, int tabs)
 	// 	REWRITE WHOLE FUNCTION
 	//
 	if (elems < 1) {
-		g_print ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
+		printf ("%sThis IM4P is not encrypted, no KBAG values\n", padding);
 		exit(1);
 	}
 	img4PrintKeybag ((char *) asn1ElementAtIndex(buf, 4), padding);
@@ -282,7 +282,7 @@ void img4_handle_im4m (char *buf, int tabs)
 	}
 
 	// Print IM4M
-	g_print("  IM4M: ------\n");
+	printf("  IM4M: ------\n");
 
 	// Get buf magic
 	char *magic;
@@ -291,20 +291,20 @@ void img4_handle_im4m (char *buf, int tabs)
 
 	// Check the magic matches IM4M
 	if (strncmp("IM4M", magic, l)) {
-		g_print ("%sFile does not contain an IM4M\n", padding);
+		printf ("%sFile does not contain an IM4M\n", padding);
 		return;
 	}
 
 	// Check the IM4M has at least two elems
 	int elems = asn1ElementsInObject (buf);
 	if (elems < 2) {
-		g_print ("%s[Error] Expecting at least 2 elements\n", padding);
+		printf ("%s[Error] Expecting at least 2 elements\n", padding);
 		exit(1);
 	}
 
 	// Print the IM4M Version
 	if (--elems > 0) {
-		g_print("%sVersion: ", padding);
+		printf("%sVersion: ", padding);
 		asn1PrintNumber((asn1Tag_t *) asn1ElementAtIndex(buf, 1), "");
 		putchar('\n');
 		putchar('\n');
@@ -316,7 +316,7 @@ void img4_handle_im4m (char *buf, int tabs)
 		// Manifest Body parse
 		asn1Tag_t *manbset = (asn1Tag_t *) asn1ElementAtIndex(buf, 2);
 		if (manbset->tagNumber != kASN1TagSET) {
-			g_print ("%s[Error] Expecting SET\n", padding);
+			printf ("%s[Error] Expecting SET\n", padding);
 			exit(1);
 		}
 
@@ -324,7 +324,7 @@ void img4_handle_im4m (char *buf, int tabs)
 
 		size_t sb;
 		asn1PrintPrivtag(asn1GetPrivateTagnum(privtag++, &sb), padding);
-		g_print(":\n");
+		printf(":\n");
 
 		char *manbseq = (char *)privtag + sb;
 		manbseq += asn1Len(manbseq).sizeBytes + 1;
@@ -354,7 +354,7 @@ void img4_handle_im4r (char *buf, int tabs)
 	}
 
 	/* Print IM4R banner */
-	g_print ("%sIM4R: ------\n", padding);
+	printf ("%sIM4R: ------\n", padding);
 
 	/* Verify the buf magic */
 	char *magic;
@@ -363,21 +363,21 @@ void img4_handle_im4r (char *buf, int tabs)
 
 	/* Check the magic matches IM4R */
 	if (strncmp (magic, "IM4R", 4)) {
-		g_print ("%sFile does not contain an IM4R\n", padding);
+		printf ("%sFile does not contain an IM4R\n", padding);
 		exit (0);
 	}
 
 	/* Verify the amount of elements in the IM4R */
 	int elems = asn1ElementsInObject (buf);
 	if (elems < 2) {
-		g_print ("%s[Error] Expecting at least 2 elements\n", padding);
+		printf ("%s[Error] Expecting at least 2 elements\n", padding);
 		exit (0);
 	}
 
 	/* The BNCN is contained within an ASN1 SET */
 	asn1Tag_t *set = (asn1Tag_t *) asn1ElementAtIndex (buf, 1);
 	if (set->tagNumber != kASN1TagSET) {
-		g_print ("%s[Error] Expecting SET\n", padding);
+		printf ("%s[Error] Expecting SET\n", padding);
 		exit (0);
 	}
 
@@ -386,13 +386,13 @@ void img4_handle_im4r (char *buf, int tabs)
 	
 	/* Check if the tag is private */
 	if (set->tagClass != kASN1TagClassPrivate) {
-		g_print ("%s[Error] Expecting Tag of private type\n", padding);
+		printf ("%s[Error] Expecting Tag of private type\n", padding);
 		exit (0);
 	}
 	
 	/* Print the private tag, which should be "BNCN" */
 	asn1PrintPrivtag (asn1GetPrivateTagnum (set++, 0), padding);
-	g_print ("\n");
+	printf ("\n");
 
 	/* Advance to the next value */
 	set += asn1Len ((char *) set).sizeBytes + 1;
@@ -400,17 +400,17 @@ void img4_handle_im4r (char *buf, int tabs)
 
 	/* Check that there is still two values left in the set */
 	if (elems < 2) {
-		g_print ("%s[Error] Expecting at least 2 values\n", padding);
+		printf ("%s[Error] Expecting at least 2 values\n", padding);
 		exit (0);
 	}
 
 	/* Print the tag key */
 	asn1PrintIA5String ((asn1Tag_t *) asn1ElementAtIndex ((char *) set, 0), padding);
-	g_print (": ");
+	printf (": ");
 
 	/* Print it's value */
 	asn1PrintOctet ((asn1Tag_t *) asn1ElementAtIndex ((char *) set, 1), padding);
-	g_print ("\n");
+	printf ("\n");
 
 }
 
@@ -439,7 +439,7 @@ Image4CompressionType img4_check_compression_type (char *buf)
 	/* Get the element count and ensure buf is an im4p */
 	int c = asn1ElementsInObject (buf);
 	if (c < 4) {
-		g_print ("[Error] Not enough elements in given payload\n");
+		printf ("[Error] Not enough elements in given payload\n");
 		exit (0);
 	}
 
@@ -497,7 +497,7 @@ image4_t *img4_decompress_bvx2 (image4_t *img)
 	size_t src_size = len.dataLen;
 
 	if (fake_src_size != 1) {
-		g_print ("[Error] fake_src_size not 1 but 0x%zx!\n", fake_src_size);
+		printf ("[Error] fake_src_size not 1 but 0x%zx!\n", fake_src_size);
 	}
 
 	img->buf = malloc (dst_size);
@@ -507,7 +507,7 @@ image4_t *img4_decompress_bvx2 (image4_t *img)
 											  NULL);
 
 	if (uncomp_size != dst_size) {
-		g_print ("[Error] Expected to decompress %zu bytes but only got %zu bytes\n", dst_size, uncomp_size);
+		printf ("[Error] Expected to decompress %zu bytes but only got %zu bytes\n", dst_size, uncomp_size);
 		exit(1);
 	}			
 
@@ -542,7 +542,7 @@ image4_t *img4_decompress_lzss (image4_t *img)
 	struct compHeader *compHeader = strstr (img->buf, "complzss");
 
 	/* Print some details about the size of the buffer */
-	g_print ("[*] Compressed size: %lu, Uncompressed Size: %lu\n", ntohl(compHeader->compressedSize), ntohl(compHeader->uncompressedSize));
+	printf ("[*] Compressed size: %lu, Uncompressed Size: %lu\n", ntohl(compHeader->compressedSize), ntohl(compHeader->uncompressedSize));
 
 	/**
 	 * 	TODO: Add KPP and other useful detections as functions in, say, kernel.c or darwin.c
@@ -554,7 +554,7 @@ image4_t *img4_decompress_lzss (image4_t *img)
 	 * 	3	char *found = NULL;
 	 *  4	if ((found = memmem(buffer + 0x2000, buf_size, "__IMAGEEND", 8))) {
 	 * 	5		char *kpp = memmem (found - 0x1000, 0x1000, sig, 4);
-	 * 	6		if (kpp) g_print ("kpp is at: %slld (0x%x)\n", kpp -buffer, kpp-buffer);
+	 * 	6		if (kpp) printf ("kpp is at: %slld (0x%x)\n", kpp -buffer, kpp-buffer);
 	 * 	7	}
 	 * 
 	 */
@@ -568,18 +568,18 @@ image4_t *img4_decompress_lzss (image4_t *img)
 
 	/* Check if there was a memmem result */
 	if (!feed) {
-		g_print ("[*] Error: Could not find Kernel 0xfeedfacf, Mach-O possibly 32bit?\n");
+		printf ("[*] Error: Could not find Kernel 0xfeedfacf, Mach-O possibly 32bit?\n");
 
 		sig = 0xfeedface;
 		feed = memmem (img->buf + 64, 1024, &sig, 3);
 
 		if (!feed) {
-			g_print ("[*] Error: Could not find Kernel 0xfeedface (32bit)\n");
+			printf ("[*] Error: Could not find Kernel 0xfeedface (32bit)\n");
 			exit (0);
 		}
 
 	} else {
-		g_print ("[*] Found Kernel 0xfeedfacf: %d\n", feed -img->buf);
+		printf ("[*] Found Kernel 0xfeedfacf: %d\n", feed -img->buf);
 	}
 
 	/* Try to decompress */
@@ -591,7 +591,7 @@ image4_t *img4_decompress_lzss (image4_t *img)
 	 * 	This will tell if the decompression was successful/
 	 */
 	if (rc != ntohl (compHeader->uncompressedSize)) {
-		g_print ("[*] Error: Expected %d bytes, but got %d bytes. Exiting\n", ntohl (compHeader->uncompressedSize), rc);
+		printf ("[*] Error: Expected %d bytes, but got %d bytes. Exiting\n", ntohl (compHeader->uncompressedSize), rc);
 		exit (0);
 	}
 
@@ -633,12 +633,12 @@ char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 	char decIV[33];
 	memcpy (decIV, &_key[0], 32);
 	decIV[32] = '\0';
-	//g_print ("IV: %s\n", decIV);
+	//printf ("IV: %s\n", decIV);
 	
 	char decKey[65];
 	memcpy (decKey, &_key[32], 64);
 	decKey[64] = '\0';
-	//g_print ("Key: %s\n", decKey);
+	//printf ("Key: %s\n", decKey);
 
 	/* Create an uint8_t array for both key and iv of the correct size */
 	uint8_t key[32] = { };
@@ -674,7 +674,7 @@ char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 
 	/* Debug: Print the result code for CC */
 	if (dec == 0) {
-		g_print ("[*] File decrypted successfully.\n");
+		printf ("[*] File decrypted successfully.\n");
 	}
 
 
@@ -688,20 +688,20 @@ char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 	 * 	contains a compression magic.
 	 * 
 	 */
-	g_print ("[*] Detecting compression type...");
+	printf ("[*] Detecting compression type...");
 
 	if (!strncmp (ret, "bvx2", 4) && !dont_decomp) {
-		g_print (" bvx2.\n");
+		printf (" bvx2.\n");
 		return (char *) img4_decompress_bvx2_decrypted_buffer (ret, len.dataLen);
 	} else if (!strncmp (ret, "complzss", 8) && !dont_decomp) {
-		g_print (" lzss\n");
+		printf (" lzss\n");
 
 		img->buf = ret;
 		img->size = len.dataLen;
 
 		return (char *) img4_decompress_lzss (img);
 	} else {
-		g_print (" none.\n");
+		printf (" none.\n");
 		return ret;
 	}
 }
@@ -771,60 +771,60 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 
 	/* Check that the image was loaded properly */
 	if (!image->size || !image->buf) {
-		g_print ("[Error] There was an issue loading the file\n");
+		printf ("[Error] There was an issue loading the file\n");
 		exit (0);
 	}
 
 	/* If the file is an IMG4, we need to extract the im4p */
 	if (image->type == IMG4_TYPE_IMG4) {
-		g_print ("debug: extracting im4p from img4\n");
+		printf ("debug: extracting im4p from img4\n");
 		image->buf = getIM4PFromIMG4 (image->buf);
 	} else {
 		if (image->type != IMG4_TYPE_IM4P) {
-			g_print ("[Error] Image not .img4 or .im4p\n");
+			printf ("[Error] Image not .img4 or .im4p\n");
 			exit (0);
 		}
 	}
 
 	/* Print some file information */
-	g_print ("Loaded: \t%s\n", infile);
-	g_print ("Image4 Type: \t%s\n", img4_string_for_image_type (image->type));
-	g_print ("Component: \t%s\n\n", img4_get_component_name (image->buf));
+	printf ("Loaded: \t%s\n", infile);
+	printf ("Image4 Type: \t%s\n", img4_string_for_image_type (image->type));
+	printf ("Component: \t%s\n\n", img4_get_component_name (image->buf));
 
 	/* Create an image to hold the decompressed one */
 	image4_t *newimage = malloc (sizeof (image4_t));
 
 	/* Start decompression process */
-	g_print ("[*] Detecting compression type..."); 
+	printf ("[*] Detecting compression type..."); 
 
 	/* Get compression type */
 	Image4CompressionType comp = img4_check_compression_type (image->buf);
 	if (comp == IMG4_COMP_BVX2) {
 
 		/* Complete the first log */
-		g_print (" bvx2\n");
+		printf (" bvx2\n");
 
 		/* Decompress the payload */
-		g_print ("[*] Decompressing im4p...");
+		printf ("[*] Decompressing im4p...");
 		newimage = img4_decompress_bvx2 (image);
 
 		/* Check if that was successful */
 		if (!newimage->buf) {
-			g_print (" error. There was a problem decompressing the im4p\n");
+			printf (" error. There was a problem decompressing the im4p\n");
 			exit (0);
 		}
 
 		/* Print success */
-		g_print (" done!\n");
+		printf (" done!\n");
 
 	} else if (comp == IMG4_COMP_ENCRYPTED) {
 
 		/* Complete the first log */
-		g_print (" encrypted\n");
+		printf (" encrypted\n");
 
 		/* Ensure an ivkey was set */
 		if (!ivkey) {
-			g_print ("[*] Error: No decryption key was specified.\n");
+			printf ("[*] Error: No decryption key was specified.\n");
 			exit (0);
 		}
 
@@ -834,33 +834,33 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 		 * 		This key is valid for iBoot-5540.0.129 device D22ap 
 		 * 	1ef67798a0c53116a47145dfff0aac609a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f
 		 */
-		g_print ("[*] Attempting to decrypting with ivkey: %s\n", ivkey);
+		printf ("[*] Attempting to decrypting with ivkey: %s\n", ivkey);
 		newimage->buf = img4_decrypt_bytes (image, ivkey, dont_decomp);
 
 	} else if (comp == IMG4_COMP_LZSS) {
 
 		/* Complete the first log */
-		g_print (" lzss\n");
+		printf (" lzss\n");
 
 		/* Create the new image with the decompressed payload */
 		newimage = img4_decompress_lzss (image);
 
 	} else {
 
-		g_print ("\n[*] Cannot handle compression type. Exiting...\n");
+		printf ("\n[*] Cannot handle compression type. Exiting...\n");
 		exit (0);
 
 	}
 
 	/* Print that we are now writing to the file */
-	g_print ("[*] Writing decompressed payload to file: %s\n", outfile);
+	printf ("[*] Writing decompressed payload to file: %s\n", outfile);
 
 	/* Write the buffer to the outfile */
 	FILE *o = fopen (outfile, "wb");
 	fwrite (newimage->buf, newimage->size, 1, o);
 	fclose (o);
 
-	//g_print ("\nPlease run img4helper with --analyse to analyse the decompressed image.\n");
+	//printf ("\nPlease run img4helper with --analyse to analyse the decompressed image.\n");
 
 }
 
@@ -888,7 +888,7 @@ void img4_print_with_type (Image4Type print_type, char *filename)
 {
 	/* Check the given filename is not NULL */
 	if (!filename) {
-		g_print ("[Error] No filename given\n");
+		printf ("[Error] No filename given\n");
 		exit(0);
 	}
 
@@ -897,8 +897,8 @@ void img4_print_with_type (Image4Type print_type, char *filename)
 	char *magic = img4_string_for_image_type (image->type);
 
 	/* Print some info contained in the file header */
-	g_print ("Loaded: \t%s\n", filename);
-	g_print ("Image4 Type: \t%s\n", magic);
+	printf ("Loaded: \t%s\n", filename);
+	printf ("Image4 Type: \t%s\n", magic);
 
 	/* Switch through different print options */
 	switch (print_type) {
@@ -913,22 +913,22 @@ void img4_print_with_type (Image4Type print_type, char *filename)
 				char *im4r = getIM4RFromIMG4 (image->buf);
 
 				/* Print the component name so it is inline with the loaded and type */
-				g_print ("Component:  \t%s\n\n", img4_get_component_name (im4p));
+				printf ("Component:  \t%s\n\n", img4_get_component_name (im4p));
 
 				/* Print the IMG4 banner */
-				g_print ("IMG4: ------\n");
+				printf ("IMG4: ------\n");
 
 				/* Handle the im4p first */
 				img4_handle_im4p (im4p, 1);
 
 				/* Make some space between the two */
-				g_print ("\n");
+				printf ("\n");
 
 				/* Handle the im4m next */
 				img4_handle_im4m (im4m, 1);
 
 				/* More space */
-				g_print ("\n");
+				printf ("\n");
 
 				/* Finally, the im4r */
 				img4_handle_im4r (im4r, 1);
@@ -937,7 +937,7 @@ void img4_print_with_type (Image4Type print_type, char *filename)
 			} else if (!strcmp (magic, "IM4P")) {
 
 				/* Print the component type */
-				g_print ("Component: \t%s\n\n", img4_get_component_name (image->buf));
+				printf ("Component: \t%s\n\n", img4_get_component_name (image->buf));
 
 				/* Handle the im4p */
 				img4_handle_im4p (image->buf, 1);
@@ -945,19 +945,19 @@ void img4_print_with_type (Image4Type print_type, char *filename)
 			} else if (!strcmp (magic, "IM4M")) {
 
 				/* Handle the im4m */
-				g_print ("\n");
+				printf ("\n");
 				img4_handle_im4m (image->buf, 1);
 
 			} else if (!strcmp (magic, "IM4R")) {
 
 				/* Handle the im4r */
-				g_print ("\n");
+				printf ("\n");
 				img4_handle_im4r (image->buf, 1);
 
 			} else {
 
 				/* Error */
-				g_print ("[Error] Could not find an IMG4, IM4P, IM4M or IM4R\n");
+				printf ("[Error] Could not find an IMG4, IM4P, IM4M or IM4R\n");
 
 			}
 
@@ -977,7 +977,7 @@ char *im4p_extract_silent (char *fn)
 {
 	/* Check the given filename is not NULL */
 	if (!fn) {
-		g_print ("[Error] No filename given\n");
+		printf ("[Error] No filename given\n");
 		exit(0);
 	}
 
@@ -986,8 +986,8 @@ char *im4p_extract_silent (char *fn)
 	char *magic = img4_string_for_image_type (image->type);
 
 	/* Print some info contained in the file header */
-	g_print ("Loaded: \t%s\n", fn);
-	g_print ("Image4 Type: \t%s\n", magic);
+	printf ("Loaded: \t%s\n", fn);
+	printf ("Image4 Type: \t%s\n", magic);
 
 	/* Extract data elements */
 	char *tag = asn1ElementAtIndex (image->buf, 3) + 1;

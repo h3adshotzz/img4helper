@@ -38,7 +38,7 @@ void parse_header (FILE *f)
     char *buf = malloc (fsize);
     if (buf) fread (buf, fsize, 1, f);
 
-    g_print ("Loaded file %d bytes long.\n", fsize);
+    printf ("Loaded file %d bytes long.\n", fsize);
 
 
     /* */
@@ -49,10 +49,10 @@ void parse_header (FILE *f)
 
     int is_64 = 0;
     if (magic == MH_MAGIC_64 || magic == MH_CIGAM_64) {
-        g_print ("64bit\n");
+        printf ("64bit\n");
         is_64 = 1;
     } else if (magic == MH_MAGIC || magic == MH_CIGAM) {
-        g_print ("32bit. Not interested yet!\n");
+        printf ("32bit. Not interested yet!\n");
         exit (0);
     } else {
         exit (0);
@@ -60,23 +60,23 @@ void parse_header (FILE *f)
 
     struct mach_header_64 *mh_header = buf;
 
-    //g_print ("magic: %s\n", (char *)mh_header->magic);
+    //printf ("magic: %s\n", (char *)mh_header->magic);
 
     switch (mh_header->cputype) {
         case CPU_TYPE_X86:
-            g_print ("CPU type: x86\n");
+            printf ("CPU type: x86\n");
             break;
         case CPU_TYPE_X86_64:
-            g_print ("CPU type: x86_64\n");
+            printf ("CPU type: x86_64\n");
             break;
         case CPU_TYPE_ARM:
-            g_print ("CPU type: ARM\n");
+            printf ("CPU type: ARM\n");
             break;
         case CPU_TYPE_ARM64:
-            g_print ("CPU type: ARM64\n");
+            printf ("CPU type: ARM64\n");
             break;
         default:
-            g_print ("CPU type: Unknown\n");
+            printf ("CPU type: Unknown\n");
             break;
     }
 
@@ -117,7 +117,7 @@ void darwin_helper_test (char *path)
     // Load the file
     FILE *f = fopen (path, "rb");
     if (!f) {
-        g_print ("Could not load file at all\n");
+        printf ("Could not load file at all\n");
         exit(0);
     }
 
