@@ -23,7 +23,7 @@
 #include "devtree.h"
 
 /* TEST */
-#include <libhelper.h>
+#include <libhelper/libhelper.h>
 
 
 /**

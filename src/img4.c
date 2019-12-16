@@ -542,7 +542,7 @@ image4_t *img4_decompress_lzss (image4_t *img)
 	struct compHeader *compHeader = strstr (img->buf, "complzss");
 
 	/* Print some details about the size of the buffer */
-	g_print ("[*] Compressed size: %lu, Uncompressed Size: %lu\n", compHeader->compressedSize, compHeader->uncompressedSize);
+	g_print ("[*] Compressed size: %lu, Uncompressed Size: %lu\n", ntohl(compHeader->compressedSize), ntohl(compHeader->uncompressedSize));
 
 	/**
 	 * 	TODO: Add KPP and other useful detections as functions in, say, kernel.c or darwin.c
@@ -596,7 +596,7 @@ image4_t *img4_decompress_lzss (image4_t *img)
 	}
 
 	/* Re-assign the img's size and buf vals */
-	img->size = compHeader->uncompressedSize;
+	img->size = ntohl(compHeader->uncompressedSize);
 	img->buf = decomp;
 
 	/* Return the decompressed image */
