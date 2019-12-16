@@ -21,14 +21,10 @@
 #include "img4.h"
 #include "darwin.h"
 #include "devtree.h"
-#include "sep.h"
 
 /* TEST */
-<<<<<<< HEAD
-//#include <libhelper.h>
-=======
 #include <libhelper/libhelper.h>
->>>>>>> 342726fea5670f0ea660230a07d774df210c4710
+#include <libhelper-img4/sep.h>
 
 
 /**
@@ -167,7 +163,7 @@ int main (int argc, char* argv[])
 	/* Check if we are extracting sep */
 	/* NOTE: This should be implemented into --extract. It should detect SEP */
 	if (extract_sep) {
-		sep_split_run (extract_sep);
+		sep_split_init (extract_sep);
 		exit(0);
 	}
 
