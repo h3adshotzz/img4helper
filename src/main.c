@@ -24,7 +24,11 @@
 #include "sep.h"
 
 /* TEST */
+<<<<<<< HEAD
 //#include <libhelper.h>
+=======
+#include <libhelper/libhelper.h>
+>>>>>>> 342726fea5670f0ea660230a07d774df210c4710
 
 
 /**

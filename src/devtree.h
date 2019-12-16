@@ -21,7 +21,6 @@
 #define DEVTREE_H
 
 /* Use once libhelper is properly implemented */
-#include <libhelper.h>
 
 #include <glib.h>
 #include <stdlib.h>
