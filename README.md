@@ -9,11 +9,11 @@ The following features are currently implemented and require testing:
  * Decrypting/Decompressing a full .img4 (Not tested).
  * Component detection.
  * Printing all information from an img4, im4p, im4m or im4r.
+* Device tree parsing
 
 The following features I would like to add:
  * Constructing Image4 files
- * Identification for component version, e.g. Darwin Kernel Version 19.0.0, xnu-4903.270.47~7, etc
- * Device tree parsing
+ * (Requires libhelper-macho) Identification for component version, e.g. Darwin Kernel Version 19.0.0, xnu-4903.270.47~7, etc
  * Extracting firmware keys from devices using Checkra1n/Checkm8
  * Kernel and iBoot analysis. (Symbols, etc)
 

@@ -21,9 +21,10 @@
 #include "img4.h"
 #include "darwin.h"
 #include "devtree.h"
+#include "sep.h"
 
 /* TEST */
-#include <libhelper.h>
+//#include <libhelper.h>
 
 
 /**
@@ -40,6 +41,7 @@ static char *print_im4m = 0;
 static char *print_im4r = 0;
 
 static char *extract = 0;
+static char *extract_sep = 0;
 
 static char *ivkey = 0;
 static char *outfile = 0;
@@ -62,6 +64,7 @@ static GOptionEntry entries [] =
 
 	/* File operations */
 	{ "extract", 'e', 0, G_OPTION_ARG_STRING, &extract, "Extract a payload from an IMG4 or IM4P (Use with --ivkey and --outfile).", NULL },
+	{ "extract-sep", 's', 0, G_OPTION_ARG_STRING, &extract_sep, "Extract and split a Secure Enclave (SEPOS).", NULL },
 
 	/* Other options */
 	{ "ivkey", 'k', 0, G_OPTION_ARG_STRING, &ivkey, "Specify an IVKEY pair to decrypt an im4p (Use with --extract and --outfile).", NULL },
@@ -117,8 +120,15 @@ int main (int argc, char* argv[])
 	/* Print banner */
 	g_print ("----------------------------------------\n");
 	g_print ("img4helper %s (c) @h3adsh0tzz 2019\n", VERSION_STRING);
-	g_print ("\tBuilt with %s\n", libhelper_version_string ());
+	//g_print ("\tBuilt with %s\n", libhelper_version_string ());
 	g_print ("----------------------------------------\n\n");
+
+	/* Check if we are printing version info */
+	if (version) {
+		debugf ("%s\n", libhelper_version_string());
+		debugf ("img4helper %s\n", VERSION_STRING);
+		exit (0);
+	}
 
 	/* Check if we are printing data */
 	if (print_all) {
@@ -148,6 +158,13 @@ int main (int argc, char* argv[])
 		img4_extract_im4p (extract, outfile, ivkey, dont_decomp);
 
 		exit (1);
+	}
+
+	/* Check if we are extracting sep */
+	/* NOTE: This should be implemented into --extract. It should detect SEP */
+	if (extract_sep) {
+		sep_split_run (extract_sep);
+		exit(0);
 	}
 
 	/* Check if we are analysing a kernelcache */
