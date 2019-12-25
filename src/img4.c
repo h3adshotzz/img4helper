@@ -626,9 +626,8 @@ image4_t *img4_decompress_lzss (image4_t *img)
  * 		char *				-	Decrypted, decompressed image4 payload.
  * 
  */
-char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
+image4_t *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 {
-
 	/* Split the _key into an IV and KEY */
 	char decIV[33];
 	memcpy (decIV, &_key[0], 32);
@@ -662,7 +661,7 @@ char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 
 	/* Load the payload into data */
 	char *data = tag + len.sizeBytes;
-	char *ret = malloc (len.dataLen);
+	char *raw = malloc (len.dataLen);
 
 	/* Calculate a size that is a multiple of the block size */
 	size_t tst = 0;
@@ -670,7 +669,7 @@ char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 
 	/* Use CommonCrypto's decryption function */
 	/* TODO: Implement OpenSSL for non-Apple systems */
-	CCCryptorStatus dec = CCCrypt (kCCDecrypt, kCCAlgorithmAES, 0, key, sizeof(key), iv, data, len.dataLen, ret, tst, NULL);
+	CCCryptorStatus dec = CCCrypt (kCCDecrypt, kCCAlgorithmAES, 0, key, sizeof(key), iv, data, len.dataLen, raw, tst, NULL);
 
 	/* Debug: Print the result code for CC */
 	if (dec == 0) {
@@ -690,20 +689,30 @@ char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 	 */
 	printf ("[*] Detecting compression type...");
 
-	if (!strncmp (ret, "bvx2", 4) && !dont_decomp) {
+	/* Create a new Image to return */
+	image4_t *img_ret = malloc (sizeof(image4_t));
+
+	if (!strncmp (raw, "bvx2", 4) && !dont_decomp) {
 		printf (" bvx2.\n");
-		return (char *) img4_decompress_bvx2_decrypted_buffer (ret, len.dataLen);
-	} else if (!strncmp (ret, "complzss", 8) && !dont_decomp) {
+
+		img_ret->buf = (char *) img4_decompress_bvx2_decrypted_buffer (raw, len.dataLen);
+		img_ret->size = len.dataLen;
+
+	} else if (!strncmp (raw, "complzss", 8) && !dont_decomp) {
 		printf (" lzss\n");
 
-		img->buf = ret;
-		img->size = len.dataLen;
+		img_ret->buf = raw;
+		img_ret->size = len.dataLen;
 
-		return (char *) img4_decompress_lzss (img);
+		img_ret = img4_decompress_lzss (img_ret);
 	} else {
 		printf (" none.\n");
-		return ret;
+		
+		img_ret->buf = raw;
+		img_ret->size = len.dataLen;
 	}
+
+	return img_ret;
 }
 
 
@@ -835,7 +844,7 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 		 * 	1ef67798a0c53116a47145dfff0aac609a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f
 		 */
 		printf ("[*] Attempting to decrypting with ivkey: %s\n", ivkey);
-		newimage->buf = img4_decrypt_bytes (image, ivkey, dont_decomp);
+		newimage = img4_decrypt_bytes (image, ivkey, dont_decomp);
 
 	} else if (comp == IMG4_COMP_LZSS) {
 

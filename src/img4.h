@@ -172,7 +172,7 @@ image4_t *img4_decompress_bvx2 (image4_t *img);
 image4_t *img4_decompress_lzss (image4_t *img);
 
 uint8_t *img4_decompress_bvx2_decrypted_buffer (char *in, size_t insize);
-char *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp);
+image4_t *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp);
 
 
 /**
