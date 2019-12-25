@@ -21,7 +21,6 @@
 #define IMG4_H
 
 /* Headers */
-#include <glib.h>
 #include <lzfse.h>
 
 #if defined(__APPLE__) && defined(__MACH__)

@@ -8,7 +8,7 @@ sources = ['main.c', 'img4.c', 'devtree.c', 'darwin.c', 'asn1.c', 'lzss.c']
 #
 #	Dependencies
 #
-deps = [glib_dep, lzfse_dep, cc_dep]
+deps = [lzfse_dep, cc_dep]
 
 
 #

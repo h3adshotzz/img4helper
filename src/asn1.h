@@ -28,7 +28,6 @@
 #ifndef ASN1_H
 #define ASN1_H
 
-#include <glib.h>
 #include <stdio.h>
 //#include <plist/plist.h>
 

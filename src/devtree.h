@@ -22,7 +22,6 @@
 
 /* Use once libhelper is properly implemented */
 
-#include <glib.h>
 #include <stdlib.h>
 
 #include "asn1.h"
