@@ -853,7 +853,7 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 	}
 
 	/* Print that we are now writing to the file */
-	printf ("[*] Writing decompressed payload to file: %s\n", outfile);
+	printf ("[*] Writing decompressed payload to file: %s (%d bytes)\n", outfile, newimage->size);
 
 	/* Write the buffer to the outfile */
 	FILE *o = fopen (outfile, "wb");
