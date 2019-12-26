@@ -539,10 +539,10 @@ image4_t *img4_decompress_lzss (image4_t *img)
 	 * 	Create a new compheader with the img buffer. This allows us to
 	 * 	access the different properties of the buffer.
 	 */
-	struct compHeader *compHeader = strstr (img->buf, "complzss");
+	struct compHeader *compHeader = (struct compHeader *) strstr (img->buf, "complzss");
 
 	/* Print some details about the size of the buffer */
-	printf ("[*] Compressed size: %lu, Uncompressed Size: %lu\n", ntohl(compHeader->compressedSize), ntohl(compHeader->uncompressedSize));
+	printf ("[*] Compressed size: %u, Uncompressed Size: %u\n", ntohl(compHeader->compressedSize), ntohl(compHeader->uncompressedSize));
 
 	/**
 	 * 	TODO: Add KPP and other useful detections as functions in, say, kernel.c or darwin.c
@@ -579,7 +579,7 @@ image4_t *img4_decompress_lzss (image4_t *img)
 		}
 
 	} else {
-		printf ("[*] Found Kernel 0xfeedfacf: %d\n", feed -img->buf);
+		printf ("[*] Found Kernel 0xfeedfacf: %ld\n", feed -img->buf);
 	}
 
 	/* Try to decompress */
@@ -590,7 +590,7 @@ image4_t *img4_decompress_lzss (image4_t *img)
 	 * 	Check if 'rc' is the same as the uncompressed size in the header.
 	 * 	This will tell if the decompression was successful/
 	 */
-	if (rc != ntohl (compHeader->uncompressedSize)) {
+	if (rc != (int) ntohl (compHeader->uncompressedSize)) {
 		printf ("[*] Error: Expected %d bytes, but got %d bytes. Exiting\n", ntohl (compHeader->uncompressedSize), rc);
 		exit (0);
 	}
@@ -644,12 +644,12 @@ image4_t *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 	uint8_t iv[16] = { };
 
 	/* Copy the hex data for the IV */
-	for (int i = 0; i < sizeof (iv); i++) {
+	for (int i = 0; i < (int) sizeof (iv); i++) {
 		unsigned int t;
 		sscanf (decIV+i*2,"%02x",&t);
 		iv[i] = t;
 	}
-	for (int i = 0; i < sizeof (key); i++) {
+	for (int i = 0; i < (int) sizeof (key); i++) {
 		unsigned int t;
 		sscanf (decKey+i*2,"%02x",&t);
 		key[i] = t;
@@ -862,7 +862,7 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 	}
 
 	/* Print that we are now writing to the file */
-	printf ("[*] Writing decompressed payload to file: %s (%d bytes)\n", outfile, newimage->size);
+	printf ("[*] Writing decompressed payload to file: %s (%zu bytes)\n", outfile, newimage->size);
 
 	/* Write the buffer to the outfile */
 	FILE *o = fopen (outfile, "wb");

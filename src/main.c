@@ -23,6 +23,7 @@
 //===-----------------------------------------------------------------------===//
 
 #include <libhelper/libhelper.h>
+#include <libhelper-img4/sep.h>
 
 #include "version.h"
 #include "img4.h"
@@ -184,6 +185,22 @@ int main (int argc, char *argv[])
 		return 0;
 	}
 
+	/**
+	 * 	HTool Preview Options:
+	 * 	
+	 * 	HTool is my version of JTool. It is closed source and still in development,
+	 * 	but I'm adding a couple functions here to demonstrate. I'll add these overtime.
+	 * 
+	 */
+	if (opt_htool_devtree || opt_htool_kernel) {
+		printf ("These options are part of the HTool preview, they will be added soon.\n");
+		exit (0);
+	}
+
+	if (1==1) {
+		printf ("test\n");
+	}
+
 
 	// Act on each command line option. Attempt to load the file,
 	if (opt_filename && filename) {
@@ -229,6 +246,11 @@ int main (int argc, char *argv[])
 		} else {
 			img4_extract_im4p (filename, "outfile.raw", NULL, 0);
 		}
+	}
+
+	// Check for the -s, --extract-sep command
+	if (opt_edd_extract_sep) {
+		sep_split_init (filename);
 	}
 
 

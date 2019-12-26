@@ -22,6 +22,9 @@
         "stdint.h": "c",
         "libhelper.h": "c",
         "__locale": "c",
-        "__string": "c"
+        "__string": "c",
+        "lzfse.h": "c",
+        "lzfse_internal.h": "c",
+        "lzfse_encode_tables.h": "c"
     }
 }

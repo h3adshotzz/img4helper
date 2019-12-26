@@ -23,7 +23,7 @@ void dt_cpy_val (char *d, char *s, int l)
 {
     int i = 0;
     for (i = 0; s[i] || i < l; i++) {
-        if (i > strlen (s)) break;
+        if (i > (int) strlen (s)) break;
     }
     
     if (i != l) {
@@ -38,7 +38,8 @@ uint32_t dt_dump_node (dt_node_t *node, int indent, int print_children)
     /* Testing some shit */
     char buffer[102400];
     char temp[10240];
-    char h_temp[49152];
+    /* unused */
+    //char h_temp[49152];
     char *name;
     
     int prop = 0, child = 0;
@@ -50,7 +51,7 @@ uint32_t dt_dump_node (dt_node_t *node, int indent, int print_children)
     char *offset = 0;
     int real_len;
 
-    for (prop = 0; prop < node->prop_count; prop++) {
+    for (prop = 0; prop < (int) node->prop_count; prop++) {
 
         real_len = dtp->len;
         temp[0] = '\0'; //strcat something?
@@ -98,7 +99,7 @@ uint32_t dt_dump_node (dt_node_t *node, int indent, int print_children)
 
 
     if (print_children) {
-        for (child = 0; child < node->child_count; child++) {
+        for (child = 0; child < (int) node->child_count; child++) {
             offset += dt_dump_node ((dt_node_t *) offset, indent + 1, print_children);
         }
     }

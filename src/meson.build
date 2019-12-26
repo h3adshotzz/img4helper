@@ -2,13 +2,13 @@
 #
 #	Sources
 #
-sources = ['main.c', 'img4.c', 'devtree.c', 'darwin.c', 'asn1.c', 'lzss.c']
+sources = ['main.c', 'img4.c', 'devtree.c', 'asn1.c']
 
 
 #
 #	Dependencies
 #
-deps = [lzfse_dep, cc_dep]
+deps = [cc_dep]
 
 
 #

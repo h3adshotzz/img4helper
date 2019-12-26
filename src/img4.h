@@ -21,7 +21,7 @@
 #define IMG4_H
 
 /* Headers */
-#include <lzfse.h>
+//#include <lzfse.h>
 
 #if defined(__APPLE__) && defined(__MACH__)
 #	define IMG4_HELPER_USE_COMMONCRYPTO
@@ -32,8 +32,9 @@
 #	include <openssl/sha.h
 #endif
 
+#include <libhelper-lzfse/lzfse.h>
+#include <libhelper-lzss/lzss.h>
 #include "asn1.h"
-#include "lzss.h"
 #include "config.h"
 
 #define BLOCK_SIZE		(16)
@@ -146,7 +147,7 @@ char 		*img4_get_component_name (char *buf);
  * 	The given buffer should have been verified before being given to
  * 	this function as it won't be verified again.
  * 
- * 	img$_decrypt_bytes () will decrypt a given buffer with a given ivkey
+ * 	img4_decrypt_bytes () will decrypt a given buffer with a given ivkey
  * 	pair. The given buffer should have been verified before being given to
  * 	this function as it won't be verified again.
  */
