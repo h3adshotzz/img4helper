@@ -38,7 +38,7 @@
  */
 void version ()
 {
-#if DEBUG
+#if IMG4HELPER_DEBUG
     debugf ("%s\n", libhelper_version_string());
 #endif
 
@@ -156,7 +156,9 @@ int main (int argc, char *argv[])
 			i++;
 			char *tmp = argv[i];
 			ivkey = (tmp[0] != '-') ? tmp : NULL;
-				debugf ("tmp: %s, ivkey: %s\n", tmp, ivkey);
+#if IMG4HELPER_DEBUG
+			debugf ("tmp: %s, ivkey: %s\n", tmp, ivkey);
+#endif
 
 			if (ivkey) {
 				opt_edd_dec = 1;
@@ -176,7 +178,9 @@ int main (int argc, char *argv[])
 		if (opt[0] != '-' && !opt_filename) {
 			opt_filename = 1;
 			filename = opt;
+#if IMG4HELPER_DEBUG
 			debugf ("Guessing %s is a file?\n", opt);
+#endif
 			continue;
 		}
 
@@ -208,8 +212,9 @@ int main (int argc, char *argv[])
 
 			// load the file
 			file = file_load (filename);
+#if IMG4HELPER_DEBUG
 			debugf ("File %s loaded\n", filename);
-
+#endif
 		}
 	} else {
 		// There is no file given, so we cannot continue
@@ -241,7 +246,9 @@ int main (int argc, char *argv[])
 	if (opt_edd_extract) {
 		// Check for the -k, --ivkey command
 		if (opt_edd_dec) {
+#if IMG4HELPER_DEBUG
 			debugf ("wow that actually worked\n");
+#endif
 			img4_extract_im4p (filename, "outfile.raw", ivkey, 0);
 		} else {
 			img4_extract_im4p (filename, "outfile.raw", NULL, 0);
