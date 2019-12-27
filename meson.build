@@ -37,8 +37,8 @@ configure_file(
 #
 #	Dependencies
 #
-lzfse_dep = dependency('lzfse')
-openssl_dep = dependency('openssl')
+#lzfse_dep = dependency('lzfse')
+#openssl_dep = dependency('openssl')
 cc_dep = dependency('cryptokit')
 
 
