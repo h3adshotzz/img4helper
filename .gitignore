@@ -54,6 +54,8 @@ dkms.conf
 
 # Meson build directory and test directory
 build/
+build_arm/
+build_arm64/
 test/
 
 # Fuck off DS Store

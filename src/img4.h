@@ -35,7 +35,6 @@
 #include <libhelper-lzfse/lzfse.h>
 #include <libhelper-lzss/lzss.h>
 #include "asn1.h"
-#include "config.h"
 
 #define BLOCK_SIZE		(16)
 

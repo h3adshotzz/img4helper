@@ -56,7 +56,7 @@ void version ()
  */
 void print_version_detail ()
 {
-    printf ("h3adsh0tzz HTool Version %s~%s (%s)\n", IMG4HELPER_VERSION_NUMBER, IMG4HELPER_VERSION_TAG, LIBHELPER_VERSION_LONG);
+    printf ("h3adsh0tzz Img4Helper Version %s~%s (%s)\n", IMG4HELPER_VERSION_NUMBER, IMG4HELPER_VERSION_TAG, LIBHELPER_VERSION_LONG);
     printf ("\tBuild Time:\t\t" __TIMESTAMP__ "\n");
 
     printf ("\tDefault Target:\t\t%s-%s\n", BUILD_TARGET, BUILD_ARCH);
