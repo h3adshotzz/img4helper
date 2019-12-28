@@ -257,6 +257,14 @@ int main (int argc, char *argv[])
 
 	// Check for the -s, --extract-sep command
 	if (opt_edd_extract_sep) {
+		// Check for the -k, --ivkey command
+		if (opt_edd_dec) {
+#if IMG4HELPER_DEBUG
+			debugf ("wow that actually worked (sep)\n");
+#endif
+			img4_extract_im4p (filename, ".sep-img4helper-decrytped", ivkey, 0);
+			filename = ".sep-img4helper-decrytped";
+		}
 		sep_split_init (filename);
 	}
 
