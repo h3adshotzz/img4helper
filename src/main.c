@@ -1,4 +1,4 @@
-//===------------------------------- main ----------------------------------===//
+//===------------------------------ main.c ---------------------------------===//
 //
 //                                Img4Helper
 //
@@ -199,10 +199,6 @@ int main (int argc, char *argv[])
 	if (opt_htool_devtree || opt_htool_kernel) {
 		printf ("These options are part of the HTool preview, they will be added soon.\n");
 		exit (0);
-	}
-
-	if (1==1) {
-		printf ("test\n");
 	}
 
 
