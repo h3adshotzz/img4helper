@@ -1,4 +1,4 @@
-//===---------------------------- version.h -------------------------------===//
+//===--------------------------- img4helper.h ------------------------------===//
 //
 //                                Img4Helper
 //
@@ -22,26 +22,14 @@
 //
 //===-----------------------------------------------------------------------===//
 
-#ifndef IMG4HELPER_VERSION_H
-#define IMG4HELPER_VERSION_H
+#ifndef IMG4HELPER_H
+#define IMG4HELPER_H
 
-#ifdef __APPLE__
-#   define BUILD_TARGET         "darwin"
-#   define BUILD_TARGET_CAP     "Darwin"
-#else
-#   define BUILD_TARGET         "linux"
-#   define BUILD_TARGET_CAP     "Linux"
-#endif
-
-#ifdef __x86_64__
-#   define BUILD_ARCH           "x86_64"
-#elif __arm__
-#   define BUILD_ARCH           "arm64"
-#endif
+#include <libhelper/libhelper.h>
 
 #define IMG4HELPER_VERSION_NUMBER    "1.0.0"
 #define IMG4HELPER_VERSION_TAG       "Release"
 
 #define IMG4HELPER_DEBUG             0
 
-#endif /* img4helper_version_h */
+#endif /* img4helper_h */

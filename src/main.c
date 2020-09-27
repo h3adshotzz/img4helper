@@ -22,10 +22,9 @@
 //
 //===-----------------------------------------------------------------------===//
 
-#include <libhelper/libhelper.h>
 #include <libhelper-img4/sep.h>
 
-#include "version.h"
+#include "img4helper.h"
 #include "img4.h"
 
 
@@ -38,16 +37,16 @@
  */
 void version ()
 {
-#if IMG4HELPER_DEBUG
-    debugf ("%s\n", libhelper_version_string());
-#endif
-
     /* Print banner */
 	printf ("-----------------------------------------------------\n");
 	printf ("Img4Helper %s - Built " __TIMESTAMP__ "\n", IMG4HELPER_VERSION_NUMBER);
 	printf ("-----------------------------------------------------\n\n");
 }
 
+char *version_long_string ()
+{
+	return "Img4Helper Version " IMG4HELPER_VERSION_NUMBER "~" IMG4HELPER_VERSION_TAG "; " __TIMESTAMP__ "; " LIBHELPER_VERS_WITH_ARCH;
+}
 
 /**
  * 	Img4helper detailed version output. This includes Build Target
@@ -56,14 +55,17 @@ void version ()
  */
 void print_version_detail ()
 {
-    printf ("h3adsh0tzz Img4Helper Version %s~%s (%s)\n", IMG4HELPER_VERSION_NUMBER, IMG4HELPER_VERSION_TAG, LIBHELPER_VERSION_LONG);
+    printf ("%s\n", version_long_string());
     printf ("\tBuild Time:\t\t" __TIMESTAMP__ "\n");
 
-    printf ("\tDefault Target:\t\t%s-%s\n", BUILD_TARGET, BUILD_ARCH);
+    printf ("\tDefault Target:\t\t%s-%s\n", LIBHELPER_PLATFORM_LWR, LIBHELPER_BUILD_ARCH);
     printf ("\tBuild Type: \t\t%s\n", IMG4HELPER_VERSION_TAG);
     printf ("\tBuilt With: \t\t%s\n", LIBHELPER_VERSION_LONG);
-}
 
+#if HTOOL_MACOS_PLATFORM_TYPE == HTOOL_PLATFORM_TYPE_APPLE_SILICON
+    printf ("\tNotes: \t\t\tApple Silicon\n");
+#endif
+}
 
 /**
  * 
@@ -91,7 +93,7 @@ void help (int flag, char *undef_opt)
 	printf ("  -e, --extract         Extract a payload from an IMG4 or IM4P (Use with --ivkey and --outfile).\n");
   	printf ("  -s, --extract-sep     Extract and split a Secure Enclave (SEPOS).\n");
   	printf ("  -k, --ivkey           Specify an IVKEY pair to decrypt an im4p (Use with --extract and --outfile).\n\n");
-  	//printf ("  -o, --outfile         Specify a file to write output too (Default outfile.raw, use with --extract\n\n");
+  	printf ("  -o, --outfile         Specify a file to write output too (Default outfile.raw, use with --extract\n\n");
 
 	printf ("HTool Preview:\n");
 	printf ("  -x, --xnu             Analyse an XNU KernelCache.\n");
@@ -124,6 +126,7 @@ int main (int argc, char *argv[])
 	// cmd opts
 	char *filename = NULL;
 	char *ivkey = NULL;
+	char *outfile = NULL;
 	int opt_filename = 0;
 	int opt_img4_print_all = 0, opt_img4_print_im4p = 0, opt_img4_print_im4m = 0, opt_img4_print_im4r = 0;
 	int opt_edd_extract = 0, opt_edd_extract_sep = 0, opt_edd_dec = 0;
@@ -168,6 +171,22 @@ int main (int argc, char *argv[])
 				errorf ("No encryption key specified with %s\n", opt);
 				exit (0);
 			}
+		}
+		if (check_cmd_args ("-o", "--outfile", opt)) {
+
+			// Check they specified a key
+			i++;
+			char *tmp = argv[i];
+			outfile = (tmp[0] != '-') ? tmp : NULL;
+
+			if (outfile) {
+				checked += 2;
+				continue;
+			} else {
+				errorf ("No filename for resulting file given %s\n", opt);
+				exit (0);
+			}
+
 		}
 
 		// HTool Preview commands
@@ -240,15 +259,18 @@ int main (int argc, char *argv[])
 
 	// Check for the -e, --extract command
 	if (opt_edd_extract) {
+
+		// Check for the -o --outfile command
+		char *outfile_name;
+		if (outfile) outfile_name = outfile;
+		else outfile_name = "outfile.raw";
+
 		// Check for the -k, --ivkey command
-		if (opt_edd_dec) {
-#if IMG4HELPER_DEBUG
-			debugf ("wow that actually worked\n");
-#endif
-			img4_extract_im4p (filename, "outfile.raw", ivkey, 0);
-		} else {
-			img4_extract_im4p (filename, "outfile.raw", NULL, 0);
-		}
+		char *key;
+		if (opt_edd_dec) key = ivkey;
+		else key = NULL;
+
+		img4_extract_im4p (filename, outfile_name, key, 0);
 	}
 
 	// Check for the -s, --extract-sep command

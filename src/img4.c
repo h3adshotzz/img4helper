@@ -711,7 +711,7 @@ image4_t *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 
 		img_ret = img4_decompress_lzss (img_ret);
 	} else {
-		printf (" none.\n");
+		printf (" failed.\n");
 		
 		img_ret->buf = raw;
 		img_ret->size = len.dataLen;
@@ -867,7 +867,7 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 	}
 
 	/* Print that we are now writing to the file */
-	printf ("[*] Writing decompressed payload to file: %s (%zu bytes)\n", outfile, newimage->size);
+	printf ("[*] Writing payload to file: %s (%zu bytes)\n", outfile, newimage->size);
 
 	/* Write the buffer to the outfile */
 	FILE *o = fopen (outfile, "wb");
