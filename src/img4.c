@@ -611,6 +611,43 @@ image4_t *img4_decompress_lzss (image4_t *img)
 
 
 /**
+ * 	img4_extract_payload ()
+ * 
+ * 	Takes a given image4_t and extracts only the payload and returns as a new
+ * 	image4_t structure only containing the IM4P payload, no other metadata.
+ * 
+ * 	Args:
+ * 		image4_t *img		-	The Image to extract the payload from.
+ * 
+ * 	Returns:
+ * 		image4_t *			-	The extracted payload.
+ */
+image4_t *img4_extract_payload (image4_t *image)
+{
+	// The approach here is to specifically extract the bytes from the payload tag of an
+	// Image4 file. The payload tag should be the third, counting from 0. 
+
+	/* Attempt to find the payload tag. Move pointer by 1 byte */
+	char *tag = asn1ElementAtIndex (image->buf, 3) + 1;
+
+	/* Remove the payload length tag from the start of the data */
+	asn1ElemLen_t len = asn1Len (tag);
+
+	/* Now create a new Image4 structure. */
+	image4_t *newimage = malloc (sizeof (image4_t));
+
+	/* The buf member should be the tag + the len in bytes */
+	newimage->buf = tag + len.sizeBytes;
+
+	/* The size is the size from the Image4 header, as this is the size of the payload
+		rather than the size of the whole file */
+	newimage->size = len.dataLen;
+
+	/* Return the new image */
+	return newimage;
+}
+
+/**
  * 	img4_decrypt_bytes ()
  * 
  * 	Takes a given image4_t and a ivkey pair. The key is split into
@@ -700,8 +737,7 @@ image4_t *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
 	if (!strncmp (raw, "bvx2", 4) && !dont_decomp) {
 		printf (" bvx2.\n");
 
-		img_ret->buf = (char *) img4_decompress_bvx2_decrypted_buffer (raw, len.dataLen);
-		img_ret->size = len.dataLen;
+		img_ret = img4_decompress_bvx2_decrypted_buffer (img_ret, raw, len.dataLen);
 
 	} else if (!strncmp (raw, "complzss", 8) && !dont_decomp) {
 		printf (" lzss\n");
@@ -725,16 +761,18 @@ image4_t *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp)
  * 	img4_decompress_bvx2_decrypted_buffer ()
  * 
  * 	Takes a given byte stream, and a given size (which should reflect
- * 	that byte stream). `in` will then be decompressed and returned.
+ * 	that byte stream). `in` will then be decompressed and returned as
+ * 	an Image4_t.
  * 
  * 	Args:
+ * 		image4_t *img	-	The compressed image.
  * 		char *in		-	A bytestream to be decompressed
  * 		size_t insize 	-	Size of the bytestream.
  * 
  * 	Returns:
- * 		uint8_t 		-	Decompressed bytestream.
+ * 		image4_t 		-	Decompressed image.
  */
-uint8_t *img4_decompress_bvx2_decrypted_buffer (char *in, size_t insize)
+image4_t *img4_decompress_bvx2_decrypted_buffer (image4_t *img, char *in, size_t insize)
 {
 	/**
 	 * 	I've taken this code from lzfse/lzfse_main.c. It calcs the
@@ -753,14 +791,22 @@ uint8_t *img4_decompress_bvx2_decrypted_buffer (char *in, size_t insize)
 	 * 
 	 */
 	int op = -1;
-	size_t out_allocated = (op == 0) ? insize : (4 * insize);
+	size_t out_allocated = 4 * insize;
 	size_t out_size = 0;
+
+	printf ("insize %d, 4 * insize %d, out_allocated %d\n", insize, (4 * insize), out_allocated);
 
 	uint8_t *out = (uint8_t *) malloc (out_allocated);
 
 	out_size = lzfse_decode_buffer (out, out_allocated, (uint8_t *) in, insize, NULL);
 
-	return out;
+	printf ("outsize: %d\n", out_size);
+
+	image4_t *img_ret = img;
+	img_ret->buf = (char *) out;
+	img_ret->size = out_size;
+
+	return img_ret;
 }
 
 
@@ -818,18 +864,24 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 		/* Complete the first log */
 		printf (" bvx2\n");
 
-		/* Decompress the payload */
-		printf ("[*] Decompressing im4p...");
-		newimage = img4_decompress_bvx2 (image);
+		/* Decompress the payload, or leave it if -no-decomp is set */
+		if (!dont_decomp) {
+			printf ("[*] Decompressing im4p...");
 
-		/* Check if that was successful */
-		if (!newimage->buf) {
-			printf (" error. There was a problem decompressing the im4p\n");
-			exit (0);
+			newimage = img4_decompress_bvx2 (image);
+
+			/* Check if that was successful */
+			if (!newimage->buf) {
+				printf (" error. There was a problem decompressing the im4p\n");
+				exit (0);
+			}
+
+			/* Print success */
+			printf (" done!\n");
+		} else {
+			printf ("[*] No Decompression (-no-decomp) set. Will not decompress.\n");
+			newimage = img4_extract_payload (image);
 		}
-
-		/* Print success */
-		printf (" done!\n");
 
 	} else if (comp == IMG4_COMP_ENCRYPTED) {
 
@@ -843,11 +895,6 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 		}
 
 		/* Decrypt the payload */
-		/**
-		 * 	DEBUG:
-		 * 		This key is valid for iBoot-5540.0.129 device D22ap 
-		 * 	1ef67798a0c53116a47145dfff0aac609a6ddfb9f432a971be8ae360c6ce0a8e3170f372d4e3158bb04e61d81798929f
-		 */
 		printf ("[*] Attempting to decrypting with ivkey: %s\n", ivkey);
 		newimage = img4_decrypt_bytes (image, ivkey, dont_decomp);
 
@@ -856,8 +903,15 @@ void img4_extract_im4p (char *infile, char *outfile, char *ivkey, int dont_decom
 		/* Complete the first log */
 		printf (" lzss\n");
 
-		/* Create the new image with the decompressed payload */
-		newimage = img4_decompress_lzss (image);
+		if (dont_decomp) {
+			printf ("[*] No Decompression (-no-decomp) set. Will not decompress.\n");
+
+			newimage = img4_extract_payload (image);
+			
+		} else {
+			/* Create the new image with the decompressed payload */
+			newimage = img4_decompress_lzss (image);
+		}
 
 	} else {
 

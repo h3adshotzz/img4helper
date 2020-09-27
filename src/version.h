@@ -42,6 +42,6 @@
 #define IMG4HELPER_VERSION_NUMBER    "1.0.0"
 #define IMG4HELPER_VERSION_TAG       "Release"
 
-#define IMG4HELPER_DEBUG             0
+#define IMG4HELPER_DEBUG             1
 
 #endif /* img4helper_version_h */

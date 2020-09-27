@@ -26,6 +26,7 @@
         "lzfse.h": "c",
         "lzfse_internal.h": "c",
         "lzfse_encode_tables.h": "c",
-        "strutils.h": "c"
+        "strutils.h": "c",
+        "ios": "c"
     }
 }

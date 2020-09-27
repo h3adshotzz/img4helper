@@ -88,7 +88,7 @@ void help (int flag, char *undef_opt)
   	printf ("  -r, --print-im4r\t\tPrint everything from the im4r (Providing there is one).\n\n");
 
 	printf ("Extract/Decrypt/Decompress:\n");
-	printf ("  -e, --extract         Extract a payload from an IMG4 or IM4P (Use with --ivkey and --outfile).\n");
+	printf ("  -e, --extract         Extract a payload from an IMG4 or IM4P (Use with --ivkey and --outfile) [Opt: -no-decomp].\n");
   	printf ("  -s, --extract-sep     Extract and split a Secure Enclave (SEPOS).\n");
   	printf ("  -k, --ivkey           Specify an IVKEY pair to decrypt an im4p (Use with --extract and --outfile).\n\n");
   	//printf ("  -o, --outfile         Specify a file to write output too (Default outfile.raw, use with --extract\n\n");
@@ -126,7 +126,7 @@ int main (int argc, char *argv[])
 	char *ivkey = NULL;
 	int opt_filename = 0;
 	int opt_img4_print_all = 0, opt_img4_print_im4p = 0, opt_img4_print_im4m = 0, opt_img4_print_im4r = 0;
-	int opt_edd_extract = 0, opt_edd_extract_sep = 0, opt_edd_dec = 0;
+	int opt_edd_extract = 0, opt_edd_extract_sep = 0, opt_edd_dec = 0, opt_no_decomp = 0;
 	int opt_htool_kernel = 0, opt_htool_devtree = 0;
 
 	// The file_t struct for the loaded file
@@ -148,8 +148,10 @@ int main (int argc, char *argv[])
 		if (check_cmd_args ("-r", "--print-im4r", opt)) { opt_img4_print_im4r = 1; checked++; continue; }
 
 		// Check for Extract/Decrypt/Decompress (EDD) commands
-		if (check_cmd_args ("-e", "--extract", opt )) { opt_edd_extract = 1; checked++; continue; }
 		if (check_cmd_args ("-s", "--extract-sep", opt )) { opt_edd_extract_sep = 1; checked++; continue; }
+		if (check_cmd_args ("-e", "--extract", opt )) { opt_edd_extract = 1; checked++; continue; }
+		if (check_cmd_args ("", "-no-decomp", opt )) { opt_no_decomp = 1; checked++; continue; }
+
 		if (check_cmd_args ("-k", "--ivkey", opt )) { 
 
 			// Check if they specified a key
@@ -240,14 +242,20 @@ int main (int argc, char *argv[])
 
 	// Check for the -e, --extract command
 	if (opt_edd_extract) {
+
+#if IMG4HELPER_DEBUG
+		// Check for the -no-decomp flag
+		printf ("-no-decomp: %d\n", opt_no_decomp);
+#endif
+
 		// Check for the -k, --ivkey command
 		if (opt_edd_dec) {
 #if IMG4HELPER_DEBUG
 			debugf ("wow that actually worked\n");
 #endif
-			img4_extract_im4p (filename, "outfile.raw", ivkey, 0);
+			img4_extract_im4p (filename, "outfile.raw", ivkey, opt_no_decomp);
 		} else {
-			img4_extract_im4p (filename, "outfile.raw", NULL, 0);
+			img4_extract_im4p (filename, "outfile.raw", NULL, opt_no_decomp);
 		}
 	}
 

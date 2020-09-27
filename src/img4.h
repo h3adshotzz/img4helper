@@ -175,7 +175,7 @@ Image4CompressionType img4_check_compression_type (char *buf);
 image4_t *img4_decompress_bvx2 (image4_t *img);
 image4_t *img4_decompress_lzss (image4_t *img);
 
-uint8_t *img4_decompress_bvx2_decrypted_buffer (char *in, size_t insize);
+image4_t *img4_decompress_bvx2_decrypted_buffer (image4_t *img, char *in, size_t insize);
 image4_t *img4_decrypt_bytes (image4_t *img, char *_key, int dont_decomp);
 
 
