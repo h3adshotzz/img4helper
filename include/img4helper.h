@@ -27,9 +27,10 @@
 
 #include <libhelper/libhelper.h>
 
-#define IMG4HELPER_VERSION_NUMBER    "1.0.0"
-#define IMG4HELPER_VERSION_TAG       "Release"
+#define IMG4HELPER_VERSION_NUMBER    "1.1.0"
+#define IMG4HELPER_VERSION_TAG       "Development"
 
+#define IMG4HELPER_BETA_RELEASE      1
 #define IMG4HELPER_DEBUG             0
 
 #endif /* img4helper_h */

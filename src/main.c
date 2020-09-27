@@ -77,6 +77,10 @@ void help (int flag, char *undef_opt)
     if (flag == HELP_MENU_FLAG__UNDEF_OPT)
         warningf ("Undefined Option: %s\n\n", undef_opt);
 
+#if IMG4HELPER_BETA_RELEASE
+	warningf ("This is an experimental build of Img4helper built for both x86_64 and arm64 versions of macOS.\nPlease report any strange issues to either @h3adsh0tzz or file a Github PR\n\n");
+#endif
+
     printf ("Usage: img4helper [options] FILE\n\n");
 
 	printf ("Application Options:\n");
