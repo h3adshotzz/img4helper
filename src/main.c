@@ -1,277 +1,238 @@
-//===------------------------------ main.c ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
-//                                Img4Helper
+//                              Img4helper
 //
-// 	This program is free software: you can redistribute it and/or modify
-//	it under the terms of the GNU General Public License as published by
-//	the Free Software Foundation, either version 3 of the License, or
-//	(at your option) any later version.
+//  This  document  is the property of "Is This On?" It is considered to be
+//  confidential and proprietary and may not be, in any form, reproduced or
+//  transmitted, in whole or in part, without express permission of Is This
+//  On?.
 //
-//	This program is distributed in the hope that it will be useful,
-// 	but WITHOUT ANY WARRANTY; without even the implied warranty of
-// 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// 	GNU General Public License for more details.
+//  Copyright (C) 2021, Is This On? Holdings
+//  
+//  Harry Moulton <me@h3adsh0tzz.com>
 //
-//	You should have received a copy of the GNU General Public License
-// 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//
-//  Copyright (C) 2019, Is This On?, @h3adsh0tzz
-//  me@h3adsh0tzz.com.
-//
-//
-//===-----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
-#include <libhelper/libhelper.h>
-#include <libhelper-img4/sep.h>
+#include <stdio.h>
+#include <string.h>
+#include <getopt.h>
 
-#include "version.h"
-#include "img4.h"
+#include <libhelper.h>
+#include <libhelper-logger.h>
 
+#include "img4helper.h"
 
-#define HELP_MENU_FLAG__UNDEF_OPT   0x1
-
+/* control debugging code */
+#define IMG4HELPER_DEBUG 1
 
 /**
- * 	Img4helper version header.
- * 
+ *  Img4helper Option definitions.
  */
-void version ()
+static struct option standardopts[] = {
+    { "help",           no_argument,            NULL,   'h' },
+    { "version",        no_argument,            NULL,   'v' },
+
+    { "print-all",      no_argument,            NULL,   'a' },
+    { "print-im4p",     no_argument,            NULL,   'p' },
+    { "print-im4m",     no_argument,            NULL,   'm' },
+    { "print-im4r",     no_argument,            NULL,   'r' },
+
+    { "extract",        no_argument,            NULL,   'e' },
+    { "outfile",        required_argument,      NULL,   'o' },
+
+    { "iv",             required_argument,      NULL,   'I' },
+    { "key",            required_argument,      NULL,   'K' },
+
+    { "test",           no_argument,            NULL,   't' },
+
+    { NULL,             0,                      NULL,   0   }
+};
+
+/* htool usage output */
+static void general_usage (int argc, char *argv[], int err, int ex)
 {
-#if IMG4HELPER_DEBUG
-    debugf ("%s\n", libhelper_version_string());
+    char *name = strchr (argv[0], '/');
+    fprintf ((err) ? stderr : stdout,
+        "Usage: %s [OPTIONS] PATH\n" \
+        "\n" \
+        "Application Options:\n" \
+        "  -h, --help           Print usage for Img4helper.\n" \
+        "  -v, --version        Print version for Img4helper.\n" \
+        "\n"\
+        "Image4 Options:\n" \
+        "  -a, --print-all      Print everything from an Image4.\n" \
+        "  -p, --print-im4p     Print the IM4P Payload.\n" \
+        "  -m, --print-im4m     Print the IM4M Manifest.\n" \
+        "  -r, --print-im4r     Print the IM4R Restore Info Nonce.\n" \
+        "\n"
+        "Extract/Decrypt/Decompress:\n" \
+        "  -e, --extract        Extract a payload from an IMG4 or IM4P.\n" \
+        "  -o, --outfile        Specify output path/name for extracted payload.\n" \
+        "  -I, --iv             Specify IV for decrypting payload. (use with -e).\n" \
+        "  -K, --key            Specify Key for decrypting payload. (use with -e).\n" \
+
+        "\n",
+        (name ? name + 1 : argv[0]));
+
+    exit(ex);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/* print detailed version/build info */
+void print_version_detail (int opt)
+{
+    if (opt == 1) {
+        printf (BOLD "Copyright (C) Is This On? Holdings: Img4helperl version %s (%s)\n\n" RESET, IMG4HELPER_VERSION_NUMBER, libhelper_get_version_string ());
+        
+        printf (BOLD RED "  Debug Information:\n" RESET);
+        printf (BOLD DARK_WHITE "      Build time:  " RESET DARK_GREY "%s\n", __TIMESTAMP__);
+        printf (BOLD DARK_WHITE "      Build type:  " RESET DARK_GREY "%s\n", IMG4HELPER_VERSION_TAG);
+        
+        printf (BOLD DARK_WHITE "  Default Target:  " RESET DARK_GREY "%s-%s\n", BUILD_TARGET, BUILD_ARCH);
+        printf (BOLD DARK_WHITE "        Platform:  " RESET DARK_GREY);
+#if IMG4HELPER_MACOS_PLATFORM_TYPE == IMG4HELPER_PLATFORM_TYPE_APPLE_SILICON
+        printf ("apple-silicon (Apple Silicon)\n" RESET);
+#else   
+        printf ("intel-genuine (Intel Genuine)\n" RESET);
 #endif
-
-    /* Print banner */
-	printf ("-----------------------------------------------------\n");
-	printf ("Img4Helper %s - Built " __TIMESTAMP__ "\n", IMG4HELPER_VERSION_NUMBER);
-	printf ("-----------------------------------------------------\n\n");
+    } else {
+        printf ("-----------------------------------------------------\n");
+        printf ("  Img4helper %s - Built " __TIMESTAMP__ "\n", IMG4HELPER_VERSION_NUMBER);
+        printf ("-----------------------------------------------------\n");
+    }
 }
 
 
-/**
- * 	Img4helper detailed version output. This includes Build Target
- * 	and libhelper version.
- * 
- */
-void print_version_detail ()
+/* main */
+int main(int argc, char *argv[])
 {
-    printf ("h3adsh0tzz Img4Helper Version %s~%s (%s)\n", IMG4HELPER_VERSION_NUMBER, IMG4HELPER_VERSION_TAG, LIBHELPER_VERSION_LONG);
-    printf ("\tBuild Time:\t\t" __TIMESTAMP__ "\n");
+    printf ("argc: %d\n", argc);
+    for (int i = 0; i < argc; i++)
+        printf ("argv[%d]: %s\n", i, argv[i]);
 
-    printf ("\tDefault Target:\t\t%s-%s\n", BUILD_TARGET, BUILD_ARCH);
-    printf ("\tBuild Type: \t\t%s\n", IMG4HELPER_VERSION_TAG);
-    printf ("\tBuilt With: \t\t%s\n", LIBHELPER_VERSION_LONG);
-}
+    /* always print version info */
+    print_version_detail (0);
 
+    /* create new client */
+    img4helper_client_t *client = calloc (1, sizeof (img4helper_client_t));
 
-/**
- * 
- */
-void help (int flag, char *undef_opt)
-{
-    version ();
+    /* parse the options */
+    int opt = 0;
+    int optindex = 0;
+    while ((opt = getopt_long (argc, argv, "hvapmreo:I:K:t", standardopts, &optindex)) > 0) {
+        switch (opt) {
+            
+            /**
+             *  Application Options
+             */
 
-    if (flag == HELP_MENU_FLAG__UNDEF_OPT)
-        warningf ("Undefined Option: %s\n\n", undef_opt);
+            /* -h, --help */
+            case 'h':
+                general_usage (argc, argv, 0, EXIT_SUCCESS);
+                break;
 
-    printf ("Usage: img4helper [options] FILE\n\n");
+            /* -v, --version */
+            case 'v':
+                print_version_detail (1);
+                return EXIT_SUCCESS;
 
-	printf ("Application Options:\n");
-	printf ("  -h, --help\t\t\tPrint everything from the Image4 file.\n");
-	printf ("  -v, --version\t\t\tView Img4helper build info.\n\n");
+            /**
+             *  Image4 Options
+             */
 
-	printf ("Image4:\n");
-	printf ("  -a, --print-all\t\tPrint everything from the Image4 file.\n");
-  	printf ("  -i, --print-im4p\t\tPrint everything from the im4p (Providing there is one).\n");
-  	printf ("  -m, --print-im4m\t\tPrint everything from the im4m (Providing there is one).\n");
-  	printf ("  -r, --print-im4r\t\tPrint everything from the im4r (Providing there is one).\n\n");
+            /* -a, --print-all */
+            case 'a':
+                client->flags |= FLAG_IMG4_PRINT_ALL;
+                break;
 
-	printf ("Extract/Decrypt/Decompress:\n");
-	printf ("  -e, --extract         Extract a payload from an IMG4 or IM4P (Use with --ivkey and --outfile) [Opt: -no-decomp].\n");
-  	printf ("  -s, --extract-sep     Extract and split a Secure Enclave (SEPOS).\n");
-  	printf ("  -k, --ivkey           Specify an IVKEY pair to decrypt an im4p (Use with --extract and --outfile).\n\n");
-  	//printf ("  -o, --outfile         Specify a file to write output too (Default outfile.raw, use with --extract\n\n");
+            /* -p, --print-im4p */
+            case 'p':
+                client->flags |= FLAG_IMG4_PRINT_IM4P;
+                break;
 
-	printf ("HTool Preview:\n");
-	printf ("  -x, --xnu             Analyse an XNU KernelCache.\n");
-  	printf ("  -d, --devtree         Analyse a Device Tree.\n\n");
+            /* -m, --print-im4m */
+            case 'm':
+                client->flags |= FLAG_IMG4_PRINT_IM4M;
+                break;
 
-}
+            /* -r, --print-im4r */
+            case 'r':
+                client->flags |= FLAG_IMG4_PRINT_IM4R;
+                break;
 
+            /**
+             *  Extract/Decrypt/Decompress Options
+             */
 
-/**
- * 
- */
-int check_cmd_args (char *arg1, char *arg2, char *in)
-{
-	if (!strcmp (arg1, in) || !strcmp (arg2, in)) return 1;
-	else return 0;
-}
+            /* -o, --outfile */
+            case 'o':
+                client->flags |= FLAG_OUTFILE_SET;
+                client->outfile = strdup ((const char *) optarg);
+                break;
 
+            /* -I, --iv */
+            case 'I':
+                client->flags |= FLAG_DECRYPT_IV_SET;
+                client->iv = strdup ((const char *) optarg);
+                break;
 
-/**
- * 
- * 
- */
-int main (int argc, char *argv[])
-{
-    if (argc < 2) {
-        help (0, NULL); 
-        return 0;
+            /* -K, --key */
+            case 'K':
+                client->flags |= FLAG_DECRYPT_KEY_SET;
+                client->key = strdup ((const char *) optarg);
+                break;
+            
+            default:
+                general_usage (argc, argv, 0, EXIT_FAILURE);
+                break;
+        }
     }
 
-	// cmd opts
-	char *filename = NULL;
-	char *ivkey = NULL;
-	int opt_filename = 0;
-	int opt_img4_print_all = 0, opt_img4_print_im4p = 0, opt_img4_print_im4m = 0, opt_img4_print_im4r = 0;
-	int opt_edd_extract = 0, opt_edd_extract_sep = 0, opt_edd_dec = 0, opt_no_decomp = 0;
-	int opt_htool_kernel = 0, opt_htool_devtree = 0;
+    /* check the input was valid */
+    if (!client->flags) general_usage (argc, argv, 0, EXIT_FAILURE);
 
-	// The file_t struct for the loaded file
-	file_t *file = file_create ();
+    /* set the file name */
+    if (argc - optind == 1) {
+        argc -= optind;
+        argv += optind;
+        client->filename = strdup (argv[0]);
+    }
 
-	// Check for cmd args
-	int checked = argc - 1;
-	for (int i = 1; i < argc; i++) {
-		char *opt = argv[i];
+    /* verify the filename */
+    if (!client->filename) {
+        errorf ("Error: Invalid filename.\n");
+        general_usage (argc, argv, 0, EXIT_FAILURE);
+    }
 
-		// Check for --help and --version
-		if (check_cmd_args ("-h", "--help", opt)) { help (0, NULL); return 0; }
-		if (check_cmd_args ("-v", "--version", opt)) { print_version_detail (); return 0; }
-
-		// Check for Image4 commands
-		if (check_cmd_args ("-a", "--print-all", opt)) { opt_img4_print_all = 1; checked++; continue; }
-		if (check_cmd_args ("-i", "--print-im4p", opt)) { opt_img4_print_im4p = 1; checked++; continue; }
-		if (check_cmd_args ("-m", "--print-im4m", opt)) { opt_img4_print_im4m = 1; checked++; continue; }
-		if (check_cmd_args ("-r", "--print-im4r", opt)) { opt_img4_print_im4r = 1; checked++; continue; }
-
-		// Check for Extract/Decrypt/Decompress (EDD) commands
-		if (check_cmd_args ("-s", "--extract-sep", opt )) { opt_edd_extract_sep = 1; checked++; continue; }
-		if (check_cmd_args ("-e", "--extract", opt )) { opt_edd_extract = 1; checked++; continue; }
-		if (check_cmd_args ("", "-no-decomp", opt )) { opt_no_decomp = 1; checked++; continue; }
-
-		if (check_cmd_args ("-k", "--ivkey", opt )) { 
-
-			// Check if they specified a key
-			i++;
-			char *tmp = argv[i];
-			ivkey = (tmp[0] != '-') ? tmp : NULL;
-#if IMG4HELPER_DEBUG
-			debugf ("tmp: %s, ivkey: %s\n", tmp, ivkey);
-#endif
-
-			if (ivkey) {
-				opt_edd_dec = 1;
-				checked += 2;
-				continue;
-			} else {
-				errorf ("No encryption key specified with %s\n", opt);
-				exit (0);
-			}
-		}
-
-		// HTool Preview commands
-		if (check_cmd_args ("-x", "--xnu", opt )) { opt_htool_kernel = 1; continue; }
-		if (check_cmd_args ("-d", "--devtree", opt )) { opt_htool_devtree = 1; continue; }
-
-		// Try to load the file
-		if (opt[0] != '-' && !opt_filename) {
-			opt_filename = 1;
-			filename = opt;
-#if IMG4HELPER_DEBUG
-			debugf ("Guessing %s is a file?\n", opt);
-#endif
-			continue;
-		}
-
-		// Show help because nothing seems to have matched
-		help (1, argv[i]);
-		return 0;
-	}
-
-	/**
-	 * 	HTool Preview Options:
-	 * 	
-	 * 	HTool is my version of JTool. It is closed source and still in development,
-	 * 	but I'm adding a couple functions here to demonstrate. I'll add these overtime.
-	 * 
-	 */
-	if (opt_htool_devtree || opt_htool_kernel) {
-		printf ("These options are part of the HTool preview, they will be added soon.\n");
-		exit (0);
-	}
+    debugf ("flags: 0x%08x, filename: %s\n", client->flags, client->filename);
 
 
-	// Act on each command line option. Attempt to load the file,
-	if (opt_filename && filename) {
-		if (!opt_edd_extract_sep) {
+    if ((client->flags & (1 << 3)) == (1 << 3))
+        printf ("test\n");
+    if ((client->flags & FLAG_OUTFILE_SET) == FLAG_OUTFILE_SET)
+        printf ("outfile set: %s\n", client->outfile);
 
-			// load the file
-			file = file_load (filename);
-#if IMG4HELPER_DEBUG
-			debugf ("File %s loaded\n", filename);
-#endif
-		}
-	} else {
-		// There is no file given, so we cannot continue
-        errorf ("No filename specifed, cannot continue.\n");
-        exit (0);
-	}
+    if ((client->flags & FLAG_DECRYPT_IV_SET) == FLAG_DECRYPT_IV_SET &&
+        (client->flags & FLAG_DECRYPT_KEY_SET) == FLAG_DECRYPT_KEY_SET)
+        printf("decrypt: iv: %s, key: %s\n", client->iv, client->key);
 
-	// Check for the -a, --print-all command
-	if (opt_img4_print_all) {
-		img4_print_with_type (IMG4_TYPE_ALL, filename);
-	}
-
-	// Check for the -i, --print-im4p command
-	if (opt_img4_print_im4p) {
-		img4_print_with_type (IMG4_TYPE_IM4P, filename);
-	}
-
-	// Check for the -m, --print-im4m command
-	if (opt_img4_print_im4m) {
-		img4_print_with_type (IMG4_TYPE_IM4M, filename);
-	}
-
-	// Check for the -r, --print-im4r command
-	if (opt_img4_print_im4r) {
-		img4_print_with_type (IMG4_TYPE_IM4R, filename);
-	}
-
-	// Check for the -e, --extract command
-	if (opt_edd_extract) {
-
-#if IMG4HELPER_DEBUG
-		// Check for the -no-decomp flag
-		printf ("-no-decomp: %d\n", opt_no_decomp);
-#endif
-
-		// Check for the -k, --ivkey command
-		if (opt_edd_dec) {
-#if IMG4HELPER_DEBUG
-			debugf ("wow that actually worked\n");
-#endif
-			img4_extract_im4p (filename, "outfile.raw", ivkey, opt_no_decomp);
-		} else {
-			img4_extract_im4p (filename, "outfile.raw", NULL, opt_no_decomp);
-		}
-	}
-
-	// Check for the -s, --extract-sep command
-	if (opt_edd_extract_sep) {
-		// Check for the -k, --ivkey command
-		if (opt_edd_dec) {
-#if IMG4HELPER_DEBUG
-			debugf ("wow that actually worked (sep)\n");
-#endif
-			img4_extract_im4p (filename, ".sep-img4helper-decrytped", ivkey, 0);
-			filename = ".sep-img4helper-decrytped";
-		}
-		sep_split_init (filename);
-	}
-
-
-	return 0;
+    return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
