@@ -21,6 +21,7 @@
 #include <libhelper-logger.h>
 
 #include "img4helper.h"
+#include "image4.h"
 
 /* control debugging code */
 #define IMG4HELPER_DEBUG 1
@@ -207,15 +208,13 @@ int main(int argc, char *argv[])
 
     debugf ("flags: 0x%08x, filename: %s\n", client->flags, client->filename);
 
+    /* create and load the file */
+    image4_t *image4 = image4_load_file (client->filename);
+    if (!image4) {
+        errorf ("Error: could nto load bianry from filepath: %s.\n", client->filename);
+        return EXIT_FAILURE;
+    }
 
-    if ((client->flags & (1 << 3)) == (1 << 3))
-        printf ("test\n");
-    if ((client->flags & FLAG_OUTFILE_SET) == FLAG_OUTFILE_SET)
-        printf ("outfile set: %s\n", client->outfile);
-
-    if ((client->flags & FLAG_DECRYPT_IV_SET) == FLAG_DECRYPT_IV_SET &&
-        (client->flags & FLAG_DECRYPT_KEY_SET) == FLAG_DECRYPT_KEY_SET)
-        printf("decrypt: iv: %s, key: %s\n", client->iv, client->key);
 
     return 0;
 }

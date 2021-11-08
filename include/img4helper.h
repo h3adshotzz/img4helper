@@ -21,6 +21,7 @@ extern "C" {
 #endif
 
 #include "version.h"
+#include "image4.h"
 
 /**
  *
@@ -38,6 +39,9 @@ struct __img4helper_client
 
     /* flags */
     uint32_t     flags;
+
+    /* Image4 */
+    image4_t    *image4;
 };
 
 
