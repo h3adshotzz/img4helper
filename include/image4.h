@@ -65,7 +65,7 @@ extern "C" {
  */
 typedef enum __img4helper_image4_type     image4_type_t;
 enum __img4helper_image4_type {
-    IMAGE4_TYPE_ALL,
+    IMAGE4_TYPE_UNKNOWN,
     IMAGE4_TYPE_IMG4,
     IMAGE4_TYPE_IM4P,
     IMAGE4_TYPE_IM4M,

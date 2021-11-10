@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
     debugf ("flags: 0x%08x, filename: %s\n", client->flags, client->filename);
 
     /* create and load the file */
-    image4_t *image4 = image4_load_file (client->filename);
+    image4_t *image4 = image4_load (client->filename);
     if (!image4) {
         errorf ("Error: could nto load bianry from filepath: %s.\n", client->filename);
         return EXIT_FAILURE;

@@ -30,5 +30,6 @@ target_include_directories(img4helper
 target_sources(img4helper
     PUBLIC
         main.c
+        asn1.c
         image4.c
 )
