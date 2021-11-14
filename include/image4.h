@@ -33,6 +33,9 @@ extern "C" {
 #   include <openssl/sha.h>
 #endif
 
+#include <libhelper-hlibc.h>
+#include "asn1.h"
+
 
 /**
  *  Image4 component types.
@@ -73,6 +76,17 @@ enum __img4helper_image4_type {
 };
 
 /**
+ *  \brief      KBAG types.
+ */
+typedef enum __img4helper_kbag_type         kbag_type_t;
+enum __img4helper_kbag_type {
+    IMAGE4_KBAG_TYPE_PRODUCTION,
+    IMAGE4_KBAG_TYPE_DEVELOPMENT,
+    IMAGE4_KBAG_TYPE_UNKNOWN
+};
+
+
+/**
  *  Image4 file property flags.
  */
 #define IMAGE4_FILE_ENCRYPTED           (1 << 1)
@@ -81,24 +95,58 @@ enum __img4helper_image4_type {
 #define IMAGE4_FILE_COMPRESSED_BVX2     (1 << 4)
 #define IMAGE4_FILE_COMPRESSED_NONE     (1 << 5)
 
+#define IMAGE4_FILE_INCLUDES_IM4P       (1 << 15)
+#define IMAGE4_FILE_INCLUDES_IM4M       (1 << 16)
+#define IMAGE4_FILE_INCLUDES_IM4R       (1 << 17)
+#define IMAGE4_FILE_SINGLE_COMP         (1 << 18)
+
+
+/**
+ *
+ */
+typedef struct __img4helper_kbag            kbag_t;
+struct __img4helper_kbag
+{
+    kbag_type_t      type;          /* PRODUCTION, DEVLOPMENT or UNKNOWN */
+    uint8_t          iv[16];        /* KBAG IV ASN1 tag */
+    uint8_t          key[32];       /* KBAG KEY ASN1 tag */
+};
+
+/**
+ *
+ */
+typedef struct __img4helper_image4_im4p     im4p_t;
+struct __img4helper_image4_im4p 
+{
+    uint32_t         offset;
+    uint32_t         size;
+    char            *comp;
+    char            *desc;
+
+    uint32_t         flags;
+    HSList          *kbags;      /* collection of KBAGS in header */
+};
 
 /**
  *  \brief      Parsed Image4 file structure...
  */
 typedef struct __img4helper_image4          image4_t;
-struct __img4helper_image4 {
-
+struct __img4helper_image4 
+{
     /* File properties */
-    unsigned char           *data;
-    uint32_t                 size;
-    char                    *path;
+    unsigned char   *data;      /* raw file data */
+    uint32_t         size;      /* size of file */
+    char            *path;      /* filepath */
 
     /* Flags */
-    uint32_t                 flags;
+    uint32_t         flags;     /* flags */
 
-    /* Other file properties */
-    image4_type_t            type;
-    char                    *comp;
+    /* Image4 properties */
+    im4p_t          *im4p;      /* im4p (if included) */
+    //im4m_t          *im4m;      /* im4m (if included) */
+    //im4r_t          *im4r;      /* im4r (if included) */
+
+    image4_type_t    type;      /* image4 type */
 };
 
 /**
@@ -118,6 +166,26 @@ image4_load_file (const char *path);
  */
 image4_t *
 image4_load (const char *path);
+
+/**
+ *  \brief
+ */
+image4_type_t
+image4_get_file_type (image4_t *image4);
+
+/**
+ *  \brief
+ */
+char *
+image4_get_component_type (image4_t *image4);
+
+//////
+
+/**
+ *  \brief
+ */
+im4p_t *
+image4_parse_im4p (unsigned char *buf);
 
 
 #ifdef __cplusplus
