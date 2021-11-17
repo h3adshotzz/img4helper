@@ -177,6 +177,18 @@ image4_get_file_type (image4_t *image4);
  *  \brief
  */
 char *
+image4_get_file_type_string (image4_type_t type);
+
+/**
+ *  \brief
+ **/
+char *
+img4_get_component_name (image4_t *image4);
+
+/**
+ *  \brief
+ */
+char *
 image4_get_component_type (image4_t *image4);
 
 //////

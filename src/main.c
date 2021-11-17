@@ -80,6 +80,79 @@ static void general_usage (int argc, char *argv[], int err, int ex)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int img4helper_print_all (image4_t *image4);
+int img4helper_print_im4p (im4p_t *im4p, char *indent);
+
+int img4helper_print_all (image4_t *image4)
+{
+
+    /* print the filename, type and component name */
+    printf (ANSI_COLOR_RED "Image4 Contents:\n" ANSI_COLOR_RESET);
+    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "      Loaded: "  
+        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n" ANSI_COLOR_RESET, image4->path);
+    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE " Image4 Type: " 
+        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n", image4_get_file_type_string (image4->type));
+    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "   Component: " 
+        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n\n", img4_get_component_name (image4));
+
+    if (image4->type == IMAGE4_TYPE_IMG4) {
+    
+        /**
+         *  Print im4p, im4m and im4r. If an item doesn't exist, print a simple message
+         *  to say that the .img4 doesn't contain it.
+         */
+
+    } else if (image4->type == IMAGE4_TYPE_IM4P) {
+
+        // print im4p data and kBAGs
+        printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_GREY "  IM4P: -----\n" ANSI_COLOR_RESET);
+        img4helper_print_im4p (image4->im4p, "\t");
+    }
+
+    return 1;
+}
+
+int img4helper_print_im4p (im4p_t *im4p, char *indent)
+{
+    /* print the type, descriptor and size */
+    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "%sType: "
+        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n" ANSI_COLOR_RESET, indent, im4p->comp);
+    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "%sDesc: "
+        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n" ANSI_COLOR_RESET, indent, im4p->desc);
+    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "%sSize: "
+        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "0x%08x\n\n" ANSI_COLOR_RESET, indent, im4p->size);
+
+    /* Check if there are KBAGs to print */
+    int kbag_count = h_slist_length (im4p->kbags);
+    if (kbag_count) {
+
+        printf (ANSI_COLOR_YELLOW "%sKBAGs:\n" ANSI_COLOR_RESET, indent);
+        for (int i = 0; i < kbag_count; i++) {
+            kbag_t *kbag = (kbag_t *) h_slist_nth_data (im4p->kbags, i);
+            char *kbag_type;
+
+            if (kbag->type == IMAGE4_KBAG_TYPE_PRODUCTION) kbag_type = "Production";
+            else if (kbag->type == IMAGE4_KBAG_TYPE_DEVELOPMENT) kbag_type = "Development";
+            else kbag_type = "Unknown:";
+
+            printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "%s%s:\t" ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY, indent, kbag_type);
+            for (int j = 0; j < 16; j++) printf ("%02X", kbag->iv[j]);
+            for (int j = 0; j < 32; j++) printf ("%02X", kbag->key[j]);
+
+            printf (ANSI_COLOR_RESET "\n");
+
+        }
+
+    } else {
+        printf (ANSI_COLOR_BLUE "%sNo KBAGs present.\n" ANSI_COLOR_RESET, indent);
+    }
+
+    printf ("\n");
+    return 1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 /* print detailed version/build info */
 void print_version_detail (int opt)
 {
@@ -213,6 +286,14 @@ int main(int argc, char *argv[])
     if (!image4) {
         errorf ("Error: could nto load bianry from filepath: %s.\n", client->filename);
         return EXIT_FAILURE;
+    }
+
+    /**
+     *  Option:         -a, --print-all
+     *  Description:    Print out everything included in the Image4 file.
+     */
+    if (client->flags & FLAG_IMG4_PRINT_ALL) {
+        img4helper_print_all (image4);
     }
 
 

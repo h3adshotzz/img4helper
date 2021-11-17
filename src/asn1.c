@@ -63,6 +63,20 @@ uint64_t asn1_get_number_from_tag(asn1_tag_t *tag)
     return ret;
 }
 
+char *
+asn1_get_string_from_tag (asn1_tag_t *tag)
+{
+    char *str = 0;
+    size_t len;
+
+    asn1_get_string ((char *) tag, &str, &len);
+    if (len > 32) len = len + (32 - len);
+
+    char *ret = calloc (1, len);
+    memcpy (ret, str, len);
+
+    return (ret) ? ret : NULL;
+}
 
 size_t asn1_get_private_tagnum (asn1_tag_t *tag, size_t *size_bytes)
 {

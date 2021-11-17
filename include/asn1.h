@@ -116,6 +116,9 @@ asn1_len (const char *buf);
 uint64_t
 asn1_get_number_from_tag (asn1_tag_t *tag);
 
+char *
+asn1_get_string_from_tag (asn1_tag_t *tag);
+
 size_t
 asn1_get_private_tagnum (asn1_tag_t *tag, size_t *size_bytes);
 

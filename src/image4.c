@@ -78,9 +78,6 @@ image4_load (const char *path)
 
     /* check and set the image4 file type */
     image4->type = image4_get_file_type (image4);
-    printf ("type: %d\n", image4->type);
-
-    
     if (image4->type == IMAGE4_TYPE_IMG4) {
         
         /**
@@ -125,21 +122,6 @@ FAIL:
     return (image4) ? image4 : NULL;
 }
 
-char *
-get_string_from_tag (asn1_tag_t *string)
-{
-    char *str = 0;
-    size_t len;
-
-    asn1_get_string ((char *) string, &str, &len);
-    if (len > 32) len = len + (32 - len);
-
-    char *ret = calloc (1, len);
-    memcpy (ret, str, len);
-
-    return (ret) ? ret : NULL;
-}
-
 im4p_t *
 image4_parse_im4p (unsigned char *buf)
 {
@@ -159,11 +141,11 @@ image4_parse_im4p (unsigned char *buf)
 
     /* get and set the component type */
     if (--elems > 0)
-        im4p->comp = get_string_from_tag ((asn1_tag_t *) asn1_element_at_index (buf, 1));
+        im4p->comp = asn1_get_string_from_tag ((asn1_tag_t *) asn1_element_at_index (buf, 1));
 
     /* get and set the descriptor */
 	if (--elems > 0)
-        im4p->desc = get_string_from_tag ((asn1_tag_t *) asn1_element_at_index (buf, 2));
+        im4p->desc = asn1_get_string_from_tag ((asn1_tag_t *) asn1_element_at_index (buf, 2));
 
     /* get and set the payload size */
     asn1_tag_t *data = (asn1_tag_t *) asn1_element_at_index (buf, 3);
@@ -242,22 +224,8 @@ image4_parse_im4p (unsigned char *buf)
             im4p->kbags = h_slist_append (im4p->kbags, kbag);
         }
 
-        // testing
-        debugf ("kbags: %d\n", h_slist_length (im4p->kbags));
-        for (int i = 0; i < h_slist_length (im4p->kbags); i++) {
-            kbag_t *kbag = (kbag_t *) h_slist_nth_data (im4p->kbags, i);
-
-            printf ("IV: ");
-            for (int j = 0; j < 16; j++) printf ("%02X", kbag->iv[j]);
-
-            printf ("\nKey: ");
-            for (int j = 0; j < 32; j++) printf ("%02X", kbag->key[j]);
-            printf ("\n\n");
-        }
-
-
     } else {
-        debugf ("no kbag\n");
+        // no kbag
     }
 
     return im4p;
@@ -274,16 +242,11 @@ image4_get_file_type (image4_t *image4)
     unsigned char *buffer = malloc (image4->size);
     memcpy (buffer, image4->data, image4->size);
 
-    if ((const char *) *image4->data == kASN1TagPrivate)
-        printf("yest\n");
-    else printf ("na\n");
-
     /**
      *	Get the Image4 magic sequence, and then compare that to the known
      *  types. Return the correct image4_type_t.
      */
     asn1_get_sequence_name(image4->data, &magic, &l);
-    debugf ("magic: %s\n", magic);
 
     if (!strncmp("IMG4", magic, l)) return IMAGE4_TYPE_IMG4;
     else if (!strncmp("IM4P", magic, l)) return IMAGE4_TYPE_IM4P;
@@ -294,6 +257,16 @@ image4_get_file_type (image4_t *image4)
 FAIL:
     warningf ("image4_get_file_type: unexpected tag, got: \"%s\"\n", magic);
     return IMAGE4_TYPE_UNKNOWN;
+}
+
+char *
+image4_get_file_type_string (image4_type_t type)
+{
+    if (type == IMAGE4_TYPE_IMG4) return "IMG4";
+    else if (type == IMAGE4_TYPE_IM4P) return "IM4P";
+    else if (type == IMAGE4_TYPE_IM4M) return "IM4M";
+    else if (type == IMAGE4_TYPE_IM4R) return "IM4R";
+    else return "UNKNOWN";
 }
 
 char *
@@ -334,7 +307,60 @@ image4_get_component_type (image4_t *image4)
     return comp;
 }
 
+char *
+img4_get_component_name (image4_t *image4)
+{
+	char *magic;
+	size_t l;
 
+	char *raw = asn1_element_at_index (image4->data, 1) + 2;
+
+	if (!strncmp (raw, "ibot", 4)) {
+		return "iBoot";
+	} else if (!strncmp (raw, IMAGE_TYPE_IBEC, 4)) {
+		return "iBoot Epoch Change (iBEC)";
+	} else if (!strncmp (raw, IMAGE_TYPE_IBSS, 4)) {
+		return "iBoot Single Stage (iBSS)";
+	} else if (!strncmp (raw, IMAGE_TYPE_LLB, 4)) {
+		return "Low Level Bootloader (LLB)";
+	} else if (!strncmp (raw, IMAGE_TYPE_SEP_OS, 4)) {
+		return "Secure Enclave OS (SEP OS)";
+	} else if (!strncmp (raw, IMAGE_TYPE_SEP_OS_RESTORE, 4)) {
+		return "Secure Enclave OS Restore (SEP OS RESTORE)";
+	} else if (!strncmp (raw, IMAGE_TYPE_DEVTREE, 4)) {
+		return "Device Tree";
+	} else if (!strncmp (raw, IMAGE_TYPE_RAMDISK, 4)) {
+		return "Update/Restore Ramdisk";
+	} else if (!strncmp (raw, IMAGE_TYPE_KERNELCACHE, 4)) {
+		return "Darwin Kernel Cache";
+	} else if (!strncmp (raw, IMAGE_TYPE_LOGO, 4)) {
+		return "Boot Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_RECMODE, 4)) {
+		return "Recovery Mode Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_NEEDSERVICE, 4)) {
+		return "Need Service Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_GLYPHCHRG, 4)) {
+		return "Glyph Charge Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_GLYPHPLUGIN, 4)) {
+		return "Glyph Plugin Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_BATTERYCHARGING0, 4)) {
+		return "Battery Charging 0 Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_BATTERYCHARGING1, 4)) {
+		return "Battery Charging 1 Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_BATTERYLOW0, 4)) {
+		return "Battery Charging Low 0 Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_BATTERYLOW1, 4)) {
+		return "Battery Charging Low 1 Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_BATTERYFULL, 4)) {
+		return "Battery Full Logo";
+	} else if (!strncmp (raw, IMAGE_TYPE_OS_RESTORE, 4)) {
+		return "iOS Restore Image";
+	} else if (!strncmp (raw, IMAGE_TYPE_HAMMER, 4)) {
+		return "Hammer";
+	} else {
+		return "Unknown Component";
+	}
+}
 
 
 
