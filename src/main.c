@@ -93,7 +93,24 @@ int img4helper_print_all (image4_t *image4)
     printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE " Image4 Type: " 
         ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n", image4_get_file_type_string (image4->type));
     printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "   Component: " 
-        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n\n", img4_get_component_name (image4));
+        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n", img4_get_component_name (image4));
+
+    /* print the compression & encryption status */
+    if (image4->type == IMAGE4_TYPE_IMG4 && (image4->flags & IMAGE4_FILE_INCLUDES_IM4P) ||
+        image4->type == IMAGE4_TYPE_IM4P) {
+        printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "     Payload: " ANSI_COLOR_RESET);
+        
+        /* if the image is encrypted, we can't tell if it's compressed yet */
+        if (image4->im4p->flags & IMAGE4_FILE_ENCRYPTED) {
+            printf (ANSI_COLOR_DARK_GREY "Encrypted\n\n");
+        } else {
+            if (image4->im4p->flags & IMAGE4_FILE_COMPRESSED_LZSS) printf (ANSI_COLOR_DARK_GREY "LZSS");
+            else if (image4->im4p->flags & IMAGE4_FILE_COMPRESSED_BVX2) printf (ANSI_COLOR_DARK_GREY "BVX2");
+            else printf (ANSI_COLOR_DARK_GREY "Not");
+            printf (" Compressed\n\n");
+        }
+    }
+
 
     if (image4->type == IMAGE4_TYPE_IMG4) {
     
@@ -105,7 +122,6 @@ int img4helper_print_all (image4_t *image4)
     } else if (image4->type == IMAGE4_TYPE_IM4P) {
 
         // print im4p data and kBAGs
-        printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_GREY "  IM4P: -----\n" ANSI_COLOR_RESET);
         img4helper_print_im4p (image4->im4p, "\t");
     }
 
@@ -114,6 +130,9 @@ int img4helper_print_all (image4_t *image4)
 
 int img4helper_print_im4p (im4p_t *im4p, char *indent)
 {
+    /* print IM4P banner */
+    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "  IM4P: -----\n" ANSI_COLOR_RESET);
+
     /* print the type, descriptor and size */
     printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "%sType: "
         ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n" ANSI_COLOR_RESET, indent, im4p->comp);

@@ -29,6 +29,9 @@
 image4_type_t
 image4_get_file_type (image4_t *image4);
 
+int
+img4_check_compression_type (char *buf);
+
 char *
 image4_get_component_type (image4_t *image4);
 //////////////////
@@ -144,20 +147,26 @@ image4_parse_im4p (unsigned char *buf)
         im4p->comp = asn1_get_string_from_tag ((asn1_tag_t *) asn1_element_at_index (buf, 1));
 
     /* get and set the descriptor */
-	if (--elems > 0)
+    if (--elems > 0)
         im4p->desc = asn1_get_string_from_tag ((asn1_tag_t *) asn1_element_at_index (buf, 2));
 
     /* get and set the payload size */
     asn1_tag_t *data = (asn1_tag_t *) asn1_element_at_index (buf, 3);
     if (data->tag_number != kASN1TagOCTET) {
-		warningf ("image4_parse_im4p: skipped an unexpected tag where an OCTETSTRING was expected\n");
-	} else {
-		im4p->size = asn1_len((char *) data + 1).data_len;
-	}
+        warningf ("image4_parse_im4p: skipped an unexpected tag where an OCTETSTRING was expected\n");
+    } else {
+	im4p->size = asn1_len((char *) data + 1).data_len;
+    }
+
+    /* check if the payload is compressed (if it's encrypted, the flag can be set during decryption */
+    im4p->flags |= img4_check_compression_type (buf);    
 
     /* check, get and set the KBAG value */
     char *kbag_octet = (char *) asn1_element_at_index (buf, 4);
     if (kbag_octet != NULL && ((asn1_tag_t *) kbag_octet)->tag_number == kASN1TagOCTET) {
+
+        /* set the im4p flag that the payload is encrypted */
+        im4p->flags |= IMAGE4_FILE_ENCRYPTED;
 
         /* get the length of the kbag tag octet */
         asn1_elem_len_t octet_len = asn1_len (++kbag_octet);
@@ -362,6 +371,30 @@ img4_get_component_name (image4_t *image4)
 	}
 }
 
+int 
+img4_check_compression_type (char *buf)
+{
+        /* Get the element count and ensure buf is an im4p */
+        int c = asn1_elements_in_object (buf);
+        if (c < 4) {
+                printf ("[Error] Not enough elements in given payload\n");
+                exit (0);
+        }
+
+        /* Try to select the payload tag from the buffer */
+        char *tag = asn1_element_at_index (buf, 3) + 1;
+        asn1_elem_len_t len = asn1_len (tag);
+        char *data = tag + len.size_bytes;
+
+        /* Check for either lzss or bvx2/lzfse */
+        if (!strncmp (data, "complzss", 8)) {
+                return IMAGE4_FILE_COMPRESSED_LZSS;
+        } else if (!strncmp (data, "bvx2", 4)) {
+                return IMAGE4_FILE_COMPRESSED_BVX2;
+        } else {
+                return IMAGE4_FILE_COMPRESSED_NONE;
+        }
+}
 
 
 

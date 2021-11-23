@@ -87,7 +87,7 @@ enum __img4helper_kbag_type {
 
 
 /**
- *  Image4 file property flags.
+ *  IM4P file property flags.
  */
 #define IMAGE4_FILE_ENCRYPTED           (1 << 1)
 #define IMAGE4_FILE_NOT_ENCRYPTED       (1 << 2)
@@ -95,6 +95,9 @@ enum __img4helper_kbag_type {
 #define IMAGE4_FILE_COMPRESSED_BVX2     (1 << 4)
 #define IMAGE4_FILE_COMPRESSED_NONE     (1 << 5)
 
+/**
+ * Image4 property flags.
+ */
 #define IMAGE4_FILE_INCLUDES_IM4P       (1 << 15)
 #define IMAGE4_FILE_INCLUDES_IM4M       (1 << 16)
 #define IMAGE4_FILE_INCLUDES_IM4R       (1 << 17)
