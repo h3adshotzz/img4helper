@@ -31,5 +31,7 @@ target_sources(img4helper
     PUBLIC
         main.c
         asn1.c
+        print.c
         image4.c
+        extract.c
 )

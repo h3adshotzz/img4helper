@@ -21,6 +21,7 @@
 #include <libhelper-logger.h>
 
 #include "img4helper.h"
+#include "extract.h"
 #include "image4.h"
 
 /* control debugging code */
@@ -80,37 +81,65 @@ static void general_usage (int argc, char *argv[], int err, int ex)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int img4helper_extract (image4_t *image4, img4helper_client_t *client)
+{
+    debugf("img4helper_extract\n");
+    int res = extract_payload_from_image (image4, client);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/* TODO: Move to print.c */
+
+static int img4helper_print_payload_encryption_compression (image4_t *image4)
+{
+    /* if the image is encrypted, we can't tell if it's compressed yet */
+    if (image4->im4p->flags & IMAGE4_FILE_ENCRYPTED) {
+        hlog_print_list_item ("     ", "Payload", "Encrypted");
+    } else {
+        if (image4->im4p->flags & IMAGE4_FILE_COMPRESSED_LZSS)
+            hlog_print_list_item ("     ", "Payload", "LZSS");
+        else if (image4->im4p->flags & IMAGE4_FILE_COMPRESSED_BVX2)
+            hlog_print_list_item ("     ", "Payload", "BVX2");
+        else
+            hlog_print_list_item ("     ", "Payload", "Compressed");
+    }
+    return 1; 
+}
+
+int img4helper_print (image4_t *image, img4helper_client_t *client);
 int img4helper_print_all (image4_t *image4);
 int img4helper_print_im4p (im4p_t *im4p, char *indent);
 
-int img4helper_print_all (image4_t *image4)
+int img4helper_print (image4_t *image4, img4helper_client_t *client)
 {
-
     /* print the filename, type and component name */
-    printf (ANSI_COLOR_RED "Image4 Contents:\n" ANSI_COLOR_RESET);
-    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "      Loaded: "  
-        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n" ANSI_COLOR_RESET, image4->path);
-    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE " Image4 Type: " 
-        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n", image4_get_file_type_string (image4->type));
-    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "   Component: " 
-        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n", img4_get_component_name (image4));
+    hlog_print_list_header ("Image4 Contents");
+    hlog_print_list_item ("      ", "Loaded", image4->path);
+    hlog_print_list_item (" ", "Image4 Type", image4_get_file_type_string (image4->type));
+    hlog_print_list_item ("   ", "Component", img4_get_component_name (image4));
 
+    /* now, print based on the type requested */
+    if (client->flags & FLAG_IMG4_PRINT_ALL) {
+        img4helper_print_all (image4);
+    } else if (client->flags & FLAG_IMG4_PRINT_IM4P) {
+
+        img4helper_print_payload_encryption_compression (image4);
+        int ret = img4helper_print_im4p (image4->im4p, "\t");
+
+        /* if there was an issue, 'ret' should be 0. */
+        if (!ret) errorf ("Could not print IM4P from file: %s\n", client->filename);
+
+    }
+}
+
+
+int img4helper_print_all (image4_t *image4)
+{  
     /* print the compression & encryption status */
     if (image4->type == IMAGE4_TYPE_IMG4 && (image4->flags & IMAGE4_FILE_INCLUDES_IM4P) ||
-        image4->type == IMAGE4_TYPE_IM4P) {
-        printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "     Payload: " ANSI_COLOR_RESET);
-        
-        /* if the image is encrypted, we can't tell if it's compressed yet */
-        if (image4->im4p->flags & IMAGE4_FILE_ENCRYPTED) {
-            printf (ANSI_COLOR_DARK_GREY "Encrypted\n\n");
-        } else {
-            if (image4->im4p->flags & IMAGE4_FILE_COMPRESSED_LZSS) printf (ANSI_COLOR_DARK_GREY "LZSS");
-            else if (image4->im4p->flags & IMAGE4_FILE_COMPRESSED_BVX2) printf (ANSI_COLOR_DARK_GREY "BVX2");
-            else printf (ANSI_COLOR_DARK_GREY "Not");
-            printf (" Compressed\n\n");
-        }
-    }
-
+        image4->type == IMAGE4_TYPE_IM4P)
+        img4helper_print_payload_encryption_compression (image4);
 
     if (image4->type == IMAGE4_TYPE_IMG4) {
     
@@ -130,16 +159,17 @@ int img4helper_print_all (image4_t *image4)
 
 int img4helper_print_im4p (im4p_t *im4p, char *indent)
 {
+    /* verify im4p is valid */
+    if (im4p == NULL)
+        return 0;
+
     /* print IM4P banner */
-    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "  IM4P: -----\n" ANSI_COLOR_RESET);
+    hlog_print_list_subheader ("  ", "IM4P: -----");
 
     /* print the type, descriptor and size */
-    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "%sType: "
-        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n" ANSI_COLOR_RESET, indent, im4p->comp);
-    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "%sDesc: "
-        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "%s\n" ANSI_COLOR_RESET, indent, im4p->desc);
-    printf (ANSI_COLOR_BOLD ANSI_COLOR_DARK_WHITE "%sSize: "
-        ANSI_COLOR_RESET ANSI_COLOR_DARK_GREY "0x%08x\n\n" ANSI_COLOR_RESET, indent, im4p->size);
+    hlog_print_list_item (indent, "Type", im4p->comp);
+    hlog_print_list_item (indent, "Desc", im4p->desc);
+    hlog_print_list_item (indent, "Size", "0x%08x", im4p->size);
 
     /* Check if there are KBAGs to print */
     int kbag_count = h_slist_length (im4p->kbags);
@@ -258,6 +288,11 @@ int main(int argc, char *argv[])
              *  Extract/Decrypt/Decompress Options
              */
 
+            /* -e, --extract */
+            case 'e':
+                client->flags |= FLAG_IMG4_EXTRACT_PAYLOAD;
+                break;
+
             /* -o, --outfile */
             case 'o':
                 client->flags |= FLAG_OUTFILE_SET;
@@ -308,11 +343,29 @@ int main(int argc, char *argv[])
     }
 
     /**
-     *  Option:         -a, --print-all
-     *  Description:    Print out everything included in the Image4 file.
+     *  Option:         -a, -p, -m, -r. --print-<all/im4p/im4m/im4r>
+     *  Description:    Print out information from the Image4 file.
      */
-    if (client->flags & FLAG_IMG4_PRINT_ALL) {
-        img4helper_print_all (image4);
+    if (client->flags & FLAG_IMG4_PRINT_ALL ||
+        client->flags & FLAG_IMG4_PRINT_IM4M ||
+        client->flags & FLAG_IMG4_PRINT_IM4P ||
+        client->flags & FLAG_IMG4_PRINT_IM4R) {
+
+        /* this will check the client->flags again to determine what to print */
+        img4helper_print (image4, client);
+    }
+
+    /**
+     *  Option:         -e, --extract
+     *  Description:    Extract the payload from the Image4 file.
+     */
+    if (client->flags & FLAG_IMG4_EXTRACT_PAYLOAD) {
+
+        /**
+         * Extract the IM4P payload. If the payload is encrypted, but --key and --iv
+         * were not set, an error will be printed.
+         */
+        img4helper_extract (image4, client);
     }
 
 

@@ -102,6 +102,7 @@ enum __img4helper_kbag_type {
 #define IMAGE4_FILE_INCLUDES_IM4M       (1 << 16)
 #define IMAGE4_FILE_INCLUDES_IM4R       (1 << 17)
 #define IMAGE4_FILE_SINGLE_COMP         (1 << 18)
+#define IMAGE4_FILE_MODIFIED_DATA       (1 << 19)       /* img4helper has modified data and/or size */
 
 
 /**

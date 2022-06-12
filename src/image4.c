@@ -115,8 +115,6 @@ image4_load (const char *path)
 
     }
 
-
-
     /* check and set the image4 component type */
     //image4->comp = image4_get_component_type (image4);
     //printf ("comp: %s\n", image4->comp);

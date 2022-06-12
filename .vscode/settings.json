@@ -27,6 +27,9 @@
         "lzfse_internal.h": "c",
         "lzfse_encode_tables.h": "c",
         "strutils.h": "c",
-        "ios": "c"
+        "ios": "c",
+        "image4.h": "c",
+        "img4helper.h": "c",
+        "libhelper-logger.h": "c"
     }
 }
