@@ -21,7 +21,7 @@ extern "C" {
 #endif
 
 #include "version.h"
-#include "image4.h"
+#include <libhelper-image4.h>
 
 /**
  *

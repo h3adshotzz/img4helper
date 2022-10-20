@@ -30,6 +30,10 @@
         "ios": "c",
         "image4.h": "c",
         "img4helper.h": "c",
-        "libhelper-logger.h": "c"
+        "libhelper-logger.h": "c",
+        "asn1.h": "c",
+        "__config": "c",
+        "locale": "c",
+        "libhelper-image4.h": "c"
     }
 }

@@ -1,0 +1,7 @@
+** Notes on Img4helper **
+
+
+** Image4 Parser **
+
+	- Written as a module for libhelper.
+	

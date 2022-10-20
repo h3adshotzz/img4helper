@@ -20,15 +20,15 @@
 #include <libhelper.h>
 #include <libhelper-logger.h>
 #include <libhelper-file.h>
+#include <libhelper-image4.h>
 
 #include "img4helper.h"
 #include "extract.h"
-#include "image4.h"
 
 #include <libhelper-lzfse.h>
 #include <CommonCrypto/CommonCrypto.h>>
 
-image4_t *decompress_bvz2 (image4_t *img)
+image4_t *decompress_bvx2 (image4_t *img)
 {
     char *tag = asn1_element_at_index (img->data, 3) + 1;
     asn1_elem_len_t len = asn1_len (tag);
@@ -54,7 +54,7 @@ image4_t *decompress_bvz2 (image4_t *img)
         exit(1);
     }
     img->size = dst_size;
-    img->flags |= IMAGE4_FILE_MODIFIED_DATA;
+    img->flags |= IMAGE4_FLAG_MODIFIED_DATA;
 
     return img;
 }
@@ -63,7 +63,7 @@ image4_t *decompress_bvz2 (image4_t *img)
 int extract_payload_from_image (image4_t *image4, img4helper_client_t *client)
 {
     /* Check if the payload is encrypted */
-    if (image4->im4p->flags & IMAGE4_FILE_ENCRYPTED) {
+    if (image4->im4p->flags & IM4P_FLAG_FILE_ENCRYPTED) {
         debugf ("payload is encrypted\n");
 
         /* Verify that the key and iv are set by CLI args */
@@ -77,18 +77,19 @@ int extract_payload_from_image (image4_t *image4, img4helper_client_t *client)
     }
 
     /* Check if the payload is compressed */
-    if (image4->im4p->flags & IMAGE4_FILE_COMPRESSED_BVX2) {
+    if (image4->im4p->flags & IM4P_FLAG_FILE_COMPRESSED_BVX2) {
         debugf("image_compressed_bvx2\n");
-    } else if (image4->im4p->flags & IMAGE4_FILE_COMPRESSED_LZSS) {
+    } else if (image4->im4p->flags & IM4P_FLAG_FILE_COMPRESSED_LZSS) {
         debugf("image_compressed_lzss\n");
-    } else if (image4->im4p->flags & IMAGE4_FILE_COMPRESSED_NONE) {
+    } else if (image4->im4p->flags & IM4P_FLAG_FILE_COMPRESSED_NONE) {
         debugf("image_compressed_none\n");
     } else {
         warningf("image_compressed_unknown\n");
     }
 
     debugf ("extracting...\n");
-    image4_t *test = decompress_bvz2 (image4);
+    debugf ("image: 0x%08x\n", image4->data);
+    image4_t *test = decompress_bvx2 (image4);
 
     printf("compressed: %d bytes, decompressed: %d bytes.\n", image4->size, test->size);
     
@@ -97,4 +98,23 @@ int extract_payload_from_image (image4_t *image4, img4helper_client_t *client)
     fclose(fp);
 
     return 1;
+}
+
+int extract_im4p_payload (image4_t *image4, img4helper_client_t *client)
+{
+
+    /* Check the image is valid */
+    if (!image4->size || !image4->data) {
+        errorf ("Invalid Image4 file: %s\n", client->filename);
+        return -1;
+    }
+
+    /* print some image info here */
+
+
+    /* Start decompression */
+    printf ("[*] Detecting compression type...");
+
+
+
 }
