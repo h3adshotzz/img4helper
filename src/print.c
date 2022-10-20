@@ -82,12 +82,13 @@ int print_image4 (image4_t *image4, img4helper_client_t *client)
         if (image4->flags & IMAGE4_FLAG_INCLUDES_IM4P || image4->type == IMAGE4_COMP_TYPE_IM4P)
             print_payload_encryption_compression (image4);
 
-        if (image4->type == IMAGE4_COMP_TYPE_IM4P || image4->type == IMAGE4_COMP_TYPE_IMG4)
-            warningf ("IM4P parsing not yet implemented\n");
+        if (image4->type == IMAGE4_COMP_TYPE_IM4P || image4->type == IMAGE4_COMP_TYPE_IMG4) {
             print_header_im4p (image4->im4p, "\t");
+        }
 
-        if (image4->type == IMAGE4_COMP_TYPE_IM4M || image4->type == IMAGE4_COMP_TYPE_IMG4)
-            warningf ("IM4M parsing not yet implemented\n");
+        if (image4->type == IMAGE4_COMP_TYPE_IM4M || image4->type == IMAGE4_COMP_TYPE_IMG4) {
+            print_header_im4m (image4->im4m, "\t");
+        }
 
         if (image4->type == IMAGE4_COMP_TYPE_IM4R || image4->type == IMAGE4_COMP_TYPE_IMG4)
             warningf ("IM4R parsing not yet implemented\n");
@@ -148,5 +149,24 @@ int print_header_im4p (im4p_t *im4p, char *indent)
     }
 
     printf ("\n");
+    return 1;
+}
+
+
+/**
+ *  This prints out the properties of an IM4M
+ */
+int print_header_im4m (im4m_t *im4m, char *indent)
+{
+    /* verify the im4m is valid */
+    if (im4m == NULL) {
+        debugf ("im4m null\n");
+        return 0;
+    }
+
+    /* print the im4m banner */
+    printf ("\n");
+    hlog_print_list_subheader ("  ", "IM4M: -----");
+
     return 1;
 }

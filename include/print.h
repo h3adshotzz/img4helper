@@ -19,3 +19,4 @@
 void print_version_detail (int opt);
 int print_image4 (image4_t *image4, img4helper_client_t *client);
 int print_header_im4p (im4p_t *im4p, char *indent);
+int print_header_im4m (im4m_t *im4m, char *indent);
