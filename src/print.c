@@ -168,5 +168,16 @@ int print_header_im4m (im4m_t *im4m, char *indent)
     printf ("\n");
     hlog_print_list_subheader ("  ", "IM4M: -----");
 
+
+    // test
+    for (int i = 0; i < h_slist_length(im4m->manifests); i++) {
+        manifest_t *man = h_slist_nth_data (im4m->manifests, i);
+        printf ("manifest: %s [%d]\n", man->name, h_slist_length (man->entries));
+        for (int j = 0; j < h_slist_length (man->entries); j++) {
+            manifest_entry_t *entry = (manifest_entry_t *) h_slist_nth_data (man->entries, j);
+            printf ("\t%s: %s\n", entry->name, entry->data);
+        }
+    }
+
     return 1;
 }
