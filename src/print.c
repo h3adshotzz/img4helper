@@ -168,15 +168,24 @@ int print_header_im4m (im4m_t *im4m, char *indent)
     printf ("\n");
     hlog_print_list_subheader ("  ", "IM4M: -----");
 
+    /* if the im4p doesn't have any manifests, print a warning message */
+    if (h_slist_length (im4m->manifests) == 0)
+        printf (ANSI_COLOR_BLUE "\tNo Manifests in IM4P.\n" ANSI_COLOR_RESET);
 
-    // test
+    /* Go through each manifest_t in the im4p and print all the entries */
     for (int i = 0; i < h_slist_length(im4m->manifests); i++) {
         manifest_t *man = h_slist_nth_data (im4m->manifests, i);
-        printf ("manifest: %s [%d]\n", man->name, h_slist_length (man->entries));
+        hlog_print_list_item ("\t", "Manifest", "%s", man->name);
+        hlog_print_list_item ("\t", "Entries", "%d", h_slist_length (man->entries));
+
+        if (h_slist_length (man->entries) == 0)
+            printf (ANSI_COLOR_BLUE "\t  No entries present.\n" ANSI_COLOR_RESET);
+
         for (int j = 0; j < h_slist_length (man->entries); j++) {
             manifest_entry_t *entry = (manifest_entry_t *) h_slist_nth_data (man->entries, j);
-            printf ("\t%s: %s\n", entry->name, entry->data);
+            hlog_print_list_item ("\t  ", entry->name, entry->data);
         }
+        printf ("\n");
     }
 
     return 1;
