@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-int extract_payload_from_image (image4_t *image4, img4helper_client_t *client);
+int img4helper_extract (image4_t *image4, img4helper_client_t *client);
 
 #ifdef __cplusplus
 }

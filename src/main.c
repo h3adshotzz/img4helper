@@ -83,26 +83,6 @@ static void general_usage (int argc, char *argv[], int err, int ex)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int img4helper_extract (image4_t *image4, img4helper_client_t *client)
-{
-    /* Check that the image was loaded properly */
-    if (!image4->size || !image4->data) {
-        errorf ("There was an issue loaded the specified Image4: %s\n", image4->path);
-        return -1;
-    }
-
-    /*  */
-
-
-
-
-    debugf("img4helper_extract\n");
-    int res = extract_payload_from_image (image4, client);
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-
 
 /* main */
 int main(int argc, char *argv[])
@@ -212,10 +192,12 @@ int main(int argc, char *argv[])
 
     debugf ("flags: 0x%08x, filename: %s\n", client->flags, client->filename);
 
-    /* create and load the file */
+    /* Create and load the file */
     image4_t *image4 = image4_load (client->filename);
-    if (!image4) {
-        errorf ("Error: could nto load bianry from filepath: %s.\n", client->filename);
+
+    /* Check that the image was loaded properly */
+    if (!image4->size || !image4->data) {
+        errorf ("Could not load an Image4 from the specified filepath: %s\n", image4->path);
         return EXIT_FAILURE;
     }
 
@@ -238,11 +220,18 @@ int main(int argc, char *argv[])
      */
     if (client->flags & FLAG_IMG4_EXTRACT_PAYLOAD) {
 
+        /* If the -o, --outfile option is not set, then set a default value */
+        if (!client->outfile)
+            client->outfile = "outfile.bin";
+
         /**
          * Extract the IM4P payload. If the payload is encrypted, but --key and --iv
          * were not set, an error will be printed.
          */
-        img4helper_extract (image4, client);
+        int res = img4helper_extract (image4, client);
+        if (!res) {
+            errorf ("shit\n");
+        }
     }
 
 

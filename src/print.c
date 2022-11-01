@@ -72,15 +72,12 @@ int print_image4 (image4_t *image4, img4helper_client_t *client)
     hlog_print_list_item ("      ", "Loaded", image4->path);
     hlog_print_list_item (" ", "Image4 Type", image4_get_file_type_description (image4));
     hlog_print_list_item ("   ", "Component", image4_get_component_type_name (image4));
+    hlog_print_list_item (" ", "Compression", image4_get_compression_description (image4));
 
     debugf ("client->flags: 0x%08x\n", client->flags);
 
     /* Print further info based on the CLI flags */
     if (client->flags & FLAG_IMG4_PRINT_ALL) {
-
-        /* print the compression and encryption status */
-        if (image4->flags & IMAGE4_FLAG_INCLUDES_IM4P || image4->type == IMAGE4_COMP_TYPE_IM4P)
-            print_payload_encryption_compression (image4);
 
         if (image4->type == IMAGE4_COMP_TYPE_IM4P || image4->type == IMAGE4_COMP_TYPE_IMG4) {
             print_header_im4p (image4->im4p, "\t");
@@ -96,7 +93,6 @@ int print_image4 (image4_t *image4, img4helper_client_t *client)
 
     } else if (client->flags & FLAG_IMG4_PRINT_IM4P) {
 
-        print_payload_encryption_compression (image4);
         int ret = print_header_im4p (image4->im4p, "\t");
 
         /* if there was an issue, 'ret' should be 0 */
