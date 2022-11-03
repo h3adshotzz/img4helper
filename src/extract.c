@@ -19,8 +19,9 @@
 /* libhelper */
 #include <libhelper.h>
 #include <libhelper-logger.h>
-#include <libhelper-file.h>
 #include <libhelper-image4.h>
+#include <libhelper-file.h>
+#include <libhelper-lzss.h>
 
 #include "img4helper.h"
 #include "extract.h"
@@ -76,9 +77,39 @@ unsigned char *decompress_bvx2_payload_bytes (unsigned char *payload, size_t dst
     return decompressed;
 }
 
-unsigned char *decompress_lzss_payload_bytes ()
+unsigned char *decompress_lzss_payload_bytes (unsigned char *payload, size_t *new_size)
 {
-    return NULL;
+    struct compHeader *compHeader = (struct compHeader *) strstr (payload, "complzss");
+    int sig = 0xfeedfacf;
+
+    unsigned char *decompressed = calloc (1, ntohl (compHeader->uncompressedSize));
+    unsigned char *feed = memmem (payload + 64, 1024, &sig, 3);
+
+    /* Check if memmem found the head of the Mach-O */
+    if (!feed) {
+        errorf ("Could not find Kernel Mach-O header: 0x%08x\n", feed);
+
+        /* Try the 32-bit header instead */
+        sig = 0xfeedface;
+        feed = memmem (payload + 64, 1024, &sig, 3);
+
+        if (!feed) {
+            errorf ("Could not find Kernel 32-bit Mach-O header: 0x%08x\n", feed);
+            return NULL;
+        }
+    }
+
+    /* Try to decompress */
+    --feed;
+    int rc = decompress_lzss ((uint8_t *) decompressed, (uint8_t *) feed, ntohl (compHeader->compressedSize));
+
+    /**
+     *  Check if 'rc' is the same as the uncompressed size in the header.
+     *  This will tell if the decompression was successful.
+     */
+    *new_size = ntohl(compHeader->uncompressedSize);
+
+    return decompressed;
 }
 
 unsigned char *decrypt_payload_bytes (unsigned char *payload, char *_iv, char *_key, size_t src_size, size_t img_size)
@@ -157,15 +188,20 @@ int img4helper_extract (image4_t *image4, img4helper_client_t *client)
 
             if (payload_bytes == NULL) errorf ("There was an issue decrypting the payload\n");
         }
+
+        /* Check for a compression type */
+        if (!strncmp (payload_bytes, "complzss", 8)) image4->im4p->flags |= IM4P_FLAG_FILE_COMPRESSED_LZSS;
+        else if (!strncmp (payload_bytes, "bvx2", 4)) image4->im4p->flags |= IM4P_FLAG_FILE_COMPRESSED_BVX2;
+        else image4->im4p->flags |= IM4P_FLAG_FILE_COMPRESSED_NONE;
     }
 
     /* Handle any compression on the im4p_payload (that should now be decompressed) */
     if (image4->im4p->flags & IM4P_FLAG_FILE_COMPRESSED_BVX2) {
 
-        printf (ANSI_COLOR_GREEN "[*] Decompressing bvx2 payload..." ANSI_COLOR_RESET);
+        printf (ANSI_COLOR_GREEN "[*] Decompressing bvx2 payload...\n" ANSI_COLOR_RESET);
 
         /* Calculate the decompressed payload size */
-        asn1_tag_t *comp_info_tag = payload_bytes + len.data_len;
+        asn1_tag_t *comp_info_tag = (im4p_payload + len.size_bytes) + len.data_len;
 
         size_t fake_src_size = asn1_get_number_from_tag ((asn1_tag_t *) asn1_element_at_index (comp_info_tag, 0));
         size_t dst_size = asn1_get_number_from_tag ((asn1_tag_t *) asn1_element_at_index (comp_info_tag, 1));
@@ -179,13 +215,19 @@ int img4helper_extract (image4_t *image4, img4helper_client_t *client)
 
         if (payload_bytes == NULL && payload_size == 0) errorf ("There was an issue decompressing the payload\n");
 
+    } else if (image4->im4p->flags & IM4P_FLAG_FILE_COMPRESSED_LZSS) {
+
+        printf (ANSI_COLOR_GREEN "[*] Decompressing lzss payload...\n" ANSI_COLOR_RESET);
+        payload_bytes = decompress_lzss_payload_bytes (payload_bytes, &payload_size);
+
+        if (payload_bytes == NULL && payload_size == 0) errorf ("There was an issue decompressing the payload\n");
     }
   
     FILE *fp = fopen(client->outfile, "w+");
     fwrite(payload_bytes, payload_size, 1, fp);
     fclose(fp);
 
-    printf (ANSI_COLOR_GREEN "[*] Extracted payload written to: %s\n" ANSI_COLOR_RESET, client->outfile);
+    printf (ANSI_COLOR_GREEN "[*] Extracted payload written to: %s (%d bytes)\n" ANSI_COLOR_RESET, client->outfile, payload_size);
 
     return 1;
 }

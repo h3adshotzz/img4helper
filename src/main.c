@@ -27,7 +27,7 @@
 #include "print.h"
 
 /* control debugging code */
-#define IMG4HELPER_DEBUG 1
+#define IMG4HELPER_DEBUG 0
 
 /**
  *  Img4helper Option definitions.
@@ -237,20 +237,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

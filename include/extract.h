@@ -20,6 +20,17 @@
 extern "C" {
 #endif
 
+/**
+ * 	Compression header for LZSS, borrowed from Joker tool.
+ */
+struct compHeader {
+	char		sig[8];
+	uint32_t	unknown;
+	uint32_t	uncompressedSize;
+	uint32_t	compressedSize;
+	uint32_t 	unknown1;
+};
+
 int img4helper_extract (image4_t *image4, img4helper_client_t *client);
 
 #ifdef __cplusplus
