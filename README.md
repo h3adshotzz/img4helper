@@ -1,5 +1,8 @@
 # img4helper
 
+NOTE: This repository is now archived. I will not be providing any future updates to this project.
+---
+
 Img4Helper is a small tool built for hnadling Apple's Image4 format used for the boot files of iOS/iPadOS and other ARM-Based platforms from Apple. The Image4 format is ASN.1 encoded and consits of an Image4 header, describing the type of image, version and any Keybags. The actual executable image, or just some type of data (Restore and boot Images are packed as .im4p), are contained within a payload tag. 
 
 Apple ships an Image4 parser with iBoot, however the one used in this is based on that of @tihmstar's. Also, the SEP Splitting utility is based on @xerub's. So a special thanks to them, although they did not personally help me with this project, by open-sourcing both img4tool and sepsplit made this possible.
